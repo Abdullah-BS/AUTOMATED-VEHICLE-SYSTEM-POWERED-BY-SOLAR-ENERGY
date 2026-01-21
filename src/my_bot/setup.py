@@ -1,3 +1,5 @@
+import os
+from glob import glob
 from setuptools import find_packages, setup
 
 package_name = 'my_bot'
@@ -10,6 +12,10 @@ setup(
         ('share/ament_index/resource_index/packages',
             ['resource/' + package_name]),
         ('share/' + package_name, ['package.xml']),
+        
+        #Launch files
+        (os.path.join('share', package_name, 'launch'), glob('launch/*.launch.py')),
+
     ],
     install_requires=['setuptools'],
     zip_safe=True,
@@ -25,7 +31,8 @@ setup(
     entry_points={
         'console_scripts': [
             # FORMAT: 'command_name = package_name.file_name:main_function'
-            'controller = my_bot.robot_controller:main',
+            'camera = my_bot.camera_node:main',
+            'lidar = my_bot.lidar_node:main',
         ],
     },
 )
