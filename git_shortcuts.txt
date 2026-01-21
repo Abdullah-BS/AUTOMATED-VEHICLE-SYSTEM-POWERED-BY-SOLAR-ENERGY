@@ -1,0 +1,16 @@
+steps:
+# Pull all files from github
+git pull  
+
+# Add all files to push to github
+git add .
+
+# commit the files, after adding, enter the update name and press the following buttons to commit them
+
+git commit
+
+write update name 
+press CTRL + O, ENTER, CTRL + X, ENTER
+
+# push the files to github
+git push
