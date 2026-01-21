@@ -36,6 +36,7 @@ setup(
             # FORMAT: 'command_name = package_name.file_name:main_function'
             'camera = my_bot.camera_node:main',
             'lidar = my_bot.lidar_node:main',
+            'navigator = my_bot.navigation_node:main',
         ],
     },
 )

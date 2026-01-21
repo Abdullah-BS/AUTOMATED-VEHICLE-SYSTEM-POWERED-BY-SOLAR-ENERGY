@@ -13,3 +13,16 @@ write update name in vscode: git config --global core.editor "code --wait"
 
 # push the files to github
 git push
+
+
+
+Killing GAZEBO:
+sudo pkill -f gazebo && sudo pkill -f ros && sudo pkill -f python
+pkill -f gzserver
+pkill -f gzclient
+pkill -f gazebo
+
+to check
+ps aux | egrep "gzserver|gzclient|gazebo" | grep -v grep
+
+
