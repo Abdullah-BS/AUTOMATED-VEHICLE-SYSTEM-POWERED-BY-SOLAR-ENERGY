@@ -15,6 +15,7 @@ setup(
         
         #Launch files
         (os.path.join('share', package_name, 'launch'), glob('launch/*.launch.py')),
+        (os.path.join('share', package_name, 'worlds'), glob('worlds/*.world')),
 
         #URDF
         (os.path.join('share', package_name, 'urdf'), glob('urdf/*.urdf')),

@@ -141,17 +141,23 @@
   </gazebo>
 
   <!-- MOVEMENT PLUGIN -->
-  <gazebo>
-    <plugin name="object_controller" filename="libgazebo_ros_planar_move.so">
-      <ros>
-        <namespace>/</namespace>
-      </ros>
-      <commandTopic>/cmd_vel</commandTopic>
-      <odometryTopic>/odom</odometryTopic>
-      <odometryFrame>odom</odometryFrame>
-      <odometryRate>20.0</odometryRate>
-      <robotBaseFrame>base_link</robotBaseFrame>
-    </plugin>
-  </gazebo>
+<gazebo>
+  <plugin name="gazebo_ros_planar_move" filename="libgazebo_ros_planar_move.so">
+    <ros>
+      <namespace>/</namespace>
+      <remapping>cmd_vel:=/cmd_vel</remapping>
+      <remapping>odom:=/odom</remapping>
+    </ros>
+
+    <update_rate>100</update_rate>
+    <publish_rate>20</publish_rate>
+
+    <publish_odom>true</publish_odom>
+    <publish_odom_tf>true</publish_odom_tf>
+
+    <odometry_frame>odom</odometry_frame>
+    <robot_base_frame>base_link</robot_base_frame>
+  </plugin>
+</gazebo>
 
 </robot>

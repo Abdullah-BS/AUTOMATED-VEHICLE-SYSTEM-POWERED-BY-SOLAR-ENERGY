@@ -1,0 +1,307 @@
+<?xml version="1.0" ?>
+<sdf version="1.6">
+  <world name="city_street">
+    <!-- Sun + ground -->
+    <include>
+      <uri>model://sun</uri>
+    </include>
+    <include>
+      <uri>model://ground_plane</uri>
+    </include>
+
+    <!-- =========================
+         STREET (blocks with turns)
+         ========================= -->
+
+    <!-- Road material (just in visuals) -->
+    <!-- Block A: horizontal -->
+    <model name="road_block_A">
+      <static>true</static>
+      <pose>-8 0 0.01 0 0 0</pose>
+      <link name="link">
+        <collision name="collision">
+          <geometry><box><size>12 4 0.02</size></box></geometry>
+        </collision>
+        <visual name="visual">
+          <geometry><box><size>12 4 0.02</size></box></geometry>
+          <material>
+            <ambient>0.15 0.15 0.15 1</ambient>
+            <diffuse>0.20 0.20 0.20 1</diffuse>
+          </material>
+        </visual>
+      </link>
+    </model>
+
+    <!-- Block B: vertical (turn) -->
+    <model name="road_block_B">
+      <static>true</static>
+      <pose>-2 4 0.01 0 0 1.5708</pose> <!-- rotated 90deg -->
+      <link name="link">
+        <collision name="collision">
+          <geometry><box><size>10 4 0.02</size></box></geometry>
+        </collision>
+        <visual name="visual">
+          <geometry><box><size>10 4 0.02</size></box></geometry>
+          <material>
+            <ambient>0.15 0.15 0.15 1</ambient>
+            <diffuse>0.20 0.20 0.20 1</diffuse>
+          </material>
+        </visual>
+      </link>
+    </model>
+
+    <!-- Block C: horizontal (after turn) -->
+    <model name="road_block_C">
+      <static>true</static>
+      <pose>5 8 0.01 0 0 0</pose>
+      <link name="link">
+        <collision name="collision">
+          <geometry><box><size>14 4 0.02</size></box></geometry>
+        </collision>
+        <visual name="visual">
+          <geometry><box><size>14 4 0.02</size></box></geometry>
+          <material>
+            <ambient>0.15 0.15 0.15 1</ambient>
+            <diffuse>0.20 0.20 0.20 1</diffuse>
+          </material>
+        </visual>
+      </link>
+    </model>
+
+    <!-- Block D: vertical (second turn down) -->
+    <model name="road_block_D">
+      <static>true</static>
+      <pose>12 3 0.01 0 0 1.5708</pose> <!-- rotated 90deg -->
+      <link name="link">
+        <collision name="collision">
+          <geometry><box><size>12 4 0.02</size></box></geometry>
+        </collision>
+        <visual name="visual">
+          <geometry><box><size>12 4 0.02</size></box></geometry>
+          <material>
+            <ambient>0.15 0.15 0.15 1</ambient>
+            <diffuse>0.20 0.20 0.20 1</diffuse>
+          </material>
+        </visual>
+      </link>
+    </model>
+
+    <!-- Block E: horizontal (back to start area) -->
+    <model name="road_block_E">
+      <static>true</static>
+      <pose>4 -2 0.01 0 0 0</pose>
+      <link name="link">
+        <collision name="collision">
+          <geometry><box><size>16 4 0.02</size></box></geometry>
+        </collision>
+        <visual name="visual">
+          <geometry><box><size>16 4 0.02</size></box></geometry>
+          <material>
+            <ambient>0.15 0.15 0.15 1</ambient>
+            <diffuse>0.20 0.20 0.20 1</diffuse>
+          </material>
+        </visual>
+      </link>
+    </model>
+
+    <!-- Optional lane marks (small white blocks) -->
+    <model name="lane_mark_1">
+      <static>true</static>
+      <pose>-8 0 0.03 0 0 0</pose>
+      <link name="link">
+        <visual name="visual">
+          <geometry><box><size>2 0.12 0.01</size></box></geometry>
+          <material>
+            <ambient>0.9 0.9 0.9 1</ambient>
+            <diffuse>0.95 0.95 0.95 1</diffuse>
+          </material>
+        </visual>
+      </link>
+    </model>
+
+    <model name="lane_mark_2">
+      <static>true</static>
+      <pose>-2 4 0.03 0 0 1.5708</pose>
+      <link name="link">
+        <visual name="visual">
+          <geometry><box><size>2 0.12 0.01</size></box></geometry>
+          <material>
+            <ambient>0.9 0.9 0.9 1</ambient>
+            <diffuse>0.95 0.95 0.95 1</diffuse>
+          </material>
+        </visual>
+      </link>
+    </model>
+
+    <!-- =========================
+         SMALLER BUILDINGS (blocks)
+         ========================= -->
+
+    <model name="building_1">
+      <static>true</static>
+      <pose>-12 -5 1.0 0 0 0</pose>
+      <link name="link">
+        <collision name="collision">
+          <geometry><box><size>3 3 2</size></box></geometry>
+        </collision>
+        <visual name="visual">
+          <geometry><box><size>3 3 2</size></box></geometry>
+        </visual>
+      </link>
+    </model>
+
+    <model name="building_2">
+      <static>true</static>
+      <pose>-4 10 1.25 0 0 0</pose>
+      <link name="link">
+        <collision name="collision">
+          <geometry><box><size>4 3 2.5</size></box></geometry>
+        </collision>
+        <visual name="visual">
+          <geometry><box><size>4 3 2.5</size></box></geometry>
+        </visual>
+      </link>
+    </model>
+
+    <model name="building_3">
+      <static>true</static>
+      <pose>14 9 1.1 0 0 0</pose>
+      <link name="link">
+        <collision name="collision">
+          <geometry><box><size>3.5 3.5 2.2</size></box></geometry>
+        </collision>
+        <visual name="visual">
+          <geometry><box><size>3.5 3.5 2.2</size></box></geometry>
+        </visual>
+      </link>
+    </model>
+
+
+    <!-- Obstacles (for testing) -->
+    <model name="obstacle_barrel_1">
+      <static>true</static>
+      <pose>-2 1 0.25 0 0 0</pose>
+      <link name="link">
+        <collision name="collision">
+          <geometry><cylinder><radius>0.25</radius><length>0.5</length></cylinder></geometry>
+        </collision>
+        <visual name="visual">
+          <geometry><cylinder><radius>0.25</radius><length>0.5</length></cylinder></geometry>
+        </visual>
+      </link>
+    </model>
+
+    <model name="obstacle_box_1">
+      <static>true</static>
+      <pose>5 -1 0.3 0 0 0</pose>
+      <link name="link">
+        <collision name="collision">
+          <geometry><box><size>0.6 0.6 0.6</size></box></geometry>
+        </collision>
+        <visual name="visual">
+          <geometry><box><size>0.6 0.6 0.6</size></box></geometry>
+        </visual>
+      </link>
+    </model>
+
+    <model name="obstacle_box_2">
+      <static>true</static>
+      <pose>8 2 0.3 0 0 0</pose>
+      <link name="link">
+        <collision name="collision">
+          <geometry><box><size>0.6 1.2 0.6</size></box></geometry>
+        </collision>
+        <visual name="visual">
+          <geometry><box><size>0.6 1.2 0.6</size></box></geometry>
+        </visual>
+      </link>
+    </model>
+
+    <!-- =========================
+         CURBS (keep robot in street)
+         ========================= -->
+
+    <!-- Curbs for road_block_A (centered at -8,0 with size 12x4) -->
+    <model name="curb_A_left">
+      <static>true</static>
+      <pose>-8 2.2 0.12 0 0 0</pose>
+      <link name="link">
+        <collision name="collision">
+          <geometry><box><size>12 0.2 0.25</size></box></geometry>
+        </collision>
+        <visual name="visual">
+          <geometry><box><size>12 0.2 0.25</size></box></geometry>
+        </visual>
+      </link>
+    </model>
+
+    <model name="curb_A_right">
+      <static>true</static>
+      <pose>-8 -2.2 0.12 0 0 0</pose>
+      <link name="link">
+        <collision name="collision">
+          <geometry><box><size>12 0.2 0.25</size></box></geometry>
+        </collision>
+        <visual name="visual">
+          <geometry><box><size>12 0.2 0.25</size></box></geometry>
+        </visual>
+      </link>
+    </model>
+
+    <!-- Curbs for road_block_C (centered at 5,8 with size 14x4) -->
+    <model name="curb_C_left">
+      <static>true</static>
+      <pose>5 10.2 0.12 0 0 0</pose>
+      <link name="link">
+        <collision name="collision">
+          <geometry><box><size>14 0.2 0.25</size></box></geometry>
+        </collision>
+        <visual name="visual">
+          <geometry><box><size>14 0.2 0.25</size></box></geometry>
+        </visual>
+      </link>
+    </model>
+
+    <model name="curb_C_right">
+      <static>true</static>
+      <pose>5 5.8 0.12 0 0 0</pose>
+      <link name="link">
+        <collision name="collision">
+          <geometry><box><size>14 0.2 0.25</size></box></geometry>
+        </collision>
+        <visual name="visual">
+          <geometry><box><size>14 0.2 0.25</size></box></geometry>
+        </visual>
+      </link>
+    </model>
+
+    <!-- Curbs for road_block_E (centered at 4,-2 with size 16x4) -->
+    <model name="curb_E_left">
+      <static>true</static>
+      <pose>4 0.2 0.12 0 0 0</pose>
+      <link name="link">
+        <collision name="collision">
+          <geometry><box><size>16 0.2 0.25</size></box></geometry>
+        </collision>
+        <visual name="visual">
+          <geometry><box><size>16 0.2 0.25</size></box></geometry>
+        </visual>
+      </link>
+    </model>
+
+    <model name="curb_E_right">
+      <static>true</static>
+      <pose>4 -4.2 0.12 0 0 0</pose>
+      <link name="link">
+        <collision name="collision">
+          <geometry><box><size>16 0.2 0.25</size></box></geometry>
+        </collision>
+        <visual name="visual">
+          <geometry><box><size>16 0.2 0.25</size></box></geometry>
+        </visual>
+      </link>
+    </model>
+
+
+  </world>
+</sdf>

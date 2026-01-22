@@ -26,6 +26,7 @@ def generate_launch_description():
         launch_arguments={
             # You can point to a custom world here if you add worlds/*.world
             # 'world': os.path.join(pkg_share, 'worlds', 'empty.world'),
+            'world': os.path.join(pkg_share, 'worlds', 'city_street.world'),
             'verbose': 'true',
         }.items(),
     )

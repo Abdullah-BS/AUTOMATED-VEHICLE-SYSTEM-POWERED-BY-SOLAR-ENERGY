@@ -26,3 +26,13 @@ to check
 ps aux | egrep "gzserver|gzclient|gazebo" | grep -v grep
 
 
+move the robot with keyboard in gazebo:
+ros2 run teleop_twist_keyboard teleop_twist_keyboard --ros-args -r cmd_vel:=/cmd_vel
+
+
+running simulation:
+ros2 launch my_bot simulation.launch.py
+SLAM: ros2 launch slam_toolbox online_async_launch.py use_sim_time:=true
+rviz2
+ros2 param set /rviz use_sim_time true
+ros2 launch nav2_bringup navigation_launch.py use_sim_time:=true
