@@ -36,3 +36,25 @@ SLAM: ros2 launch slam_toolbox online_async_launch.py use_sim_time:=true
 rviz2
 ros2 param set /rviz use_sim_time true
 ros2 launch nav2_bringup navigation_launch.py use_sim_time:=true
+
+
+
+be exactly as remote repo
+git reset --hard origin/main
+
+git clean -fd
+
+
+create a pkg:
+cd ~/ros2_ws/src
+ros2 pkg create <my_pkg> --build-type ament_python --dependencies rclpy
+
+
+
+run SITL simulation:
+sim_vehicle.py -v Rover --console --map \
+  --custom-location=21.5430,39.1720,0,0 \
+  --out udp:127.0.0.1:14560
+
+run MAVROS
+  ros2 launch mavros apm.launch fcu_url:=udp://:14560@127.0.0.1:14550
