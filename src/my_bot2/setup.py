@@ -18,6 +18,7 @@ setup(
         ('share/' + package_name + '/rviz', glob('rviz/*.rviz')),
         ('share/' + package_name + '/meshes',  glob('meshes/*')),
         ('share/' + package_name + '/maps', glob('maps/*')),
+        ('share/' + package_name + '/rviz', glob('rviz/*.rviz')),
     ],
     install_requires=['setuptools'],
     zip_safe=True,
@@ -32,6 +33,10 @@ setup(
     },
     entry_points={
         'console_scripts': [
+            'lidar_node = my_bot2.lidar_processor:main',
+            'camera_node = my_bot2.camera_processor:main',
+            'master_brake = my_bot2.master_brake:main',
+            'gui_node = my_bot2.gui_node:main', # Add this line!
         ],
     },
 )
