@@ -1,0 +1,9 @@
+Hardware & Safety Status: All systems (Lidar, Pixhawk/MAVROS, and RF2O Odometry) are functional. Your custom Lidar logic is active as a "Reactor" (instant emergency brake), while Nav2 acts as the "Thinker" (long-term path planning).
+
+The Mapping Phase: Take the cart to the KAU campus and run ros2 launch my_mapper mapping.launch.py. Drive manually to build the map, then save it using ros2 run nav2_map_server map_saver_cli -f ~/ros2_ws/src/my_mapper/maps/campus_map.
+
+RAM & Large Scale Optimization: To prevent your computer from crashing on the large campus map, open hardware_nav2_params.yaml and change the resolution from 0.05 to 0.1. This makes the Global Costmap significantly lighter while keeping the Local Costmap as a small 3x3m "bubble."
+
+The Navigation Switch: Once the map is saved, update the yaml_filename path at the bottom of hardware_nav2_params.yaml to point to your new campus_map.yaml. Rebuild your workspace with colcon build --symlink-install to apply the changes.
+
+Final Operational Workflow: For every mission, run one command: ros2 launch my_bot2 cart_bringup.launch.py. Immediately open RViz and use the 2D Pose Estimate button to tell the cart where it is starting; this connects the map to the hardware and enables full autonomy.
