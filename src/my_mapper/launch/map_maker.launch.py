@@ -23,8 +23,7 @@ def generate_launch_description():
                 'serial_baudrate': 115200,
                 'frame_id': 'laser',
                 'angle_compensate': True,
-                'angle_min': -1.5708,   # -90°
-                'angle_max':  1.5708,   # +90°
+
             }],
             output='screen'
         ),
@@ -73,3 +72,5 @@ def generate_launch_description():
             output='screen'
         ),
     ])
+    
+    

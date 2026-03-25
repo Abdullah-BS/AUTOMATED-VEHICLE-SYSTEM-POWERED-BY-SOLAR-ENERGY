@@ -108,12 +108,12 @@ def generate_launch_description():
     )
 
     # 8. Master Brake
-    master_brake_node = Node(
-        package='my_bot2',
-        executable='master_brake',
-        name='master_brake',
-        output='screen'
-    )
+    # master_brake_node = Node(
+    #     package='my_bot2',
+    #     executable='master_brake',
+    #     name='master_brake',
+    #     output='screen'
+    # )
 
     # 9. Nav2 Stack — delayed 8s
     map_server = Node(
@@ -203,6 +203,6 @@ def generate_launch_description():
         tf_laser_to_camera,
         rf2o_delayed,
         camera_processor_node,
-        master_brake_node,
+        # master_brake_node,
         nav2_delayed,
     ])
