@@ -40,8 +40,7 @@ ros2 launch nav2_bringup navigation_launch.py use_sim_time:=true
 
 
 be exactly as remote repo
-git reset --hard origin/main
-
+ 
 git clean -fd
 
 
