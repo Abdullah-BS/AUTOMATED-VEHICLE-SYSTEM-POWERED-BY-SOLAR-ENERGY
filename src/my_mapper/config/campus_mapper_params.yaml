@@ -1,0 +1,18 @@
+slam_toolbox:
+  ros__parameters:
+    # Basic Frames
+    odom_frame: odom
+    map_frame: map
+    base_frame: base_link
+    scan_topic: /scan
+    use_sim_time: False
+    mode: mapping
+
+    # Campus RAM Optimizations!
+    resolution: 0.10             # Doubled from 0.05 to save massive memory
+    max_laser_range: 12.0        # Limits math to your SLLidar's max range
+    minimum_time_interval: 0.5   # Don't process every single millisecond
+    minimum_travel_distance: 0.3 # Only map when the cart actually moves
+    
+    # Save/Resume tools
+    enable_interactive_mode: true

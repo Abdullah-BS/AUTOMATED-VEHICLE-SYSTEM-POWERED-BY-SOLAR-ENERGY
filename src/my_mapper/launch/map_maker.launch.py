@@ -1,7 +1,15 @@
+import os
+from ament_index_python.packages import get_package_share_directory
 from launch import LaunchDescription
 from launch_ros.actions import Node
 
 def generate_launch_description():
+    # Path to your new config file
+    mapper_config = os.path.join(
+        get_package_share_directory('my_mapper'),
+        'config', 'campus_mapper_params.yaml'
+    )
+
     return LaunchDescription([
         # 1. Start the Lidar
         Node(
@@ -24,7 +32,6 @@ def generate_launch_description():
         ),
 
         # 3. REAL Odometry (rf2o)
-        # This replaces the static trick. It calculates movement from the laser!
         Node(
             package='rf2o_laser_odometry',
             executable='rf2o_laser_odometry_node',
@@ -40,19 +47,13 @@ def generate_launch_description():
                 'freq' : 20.0}],
         ),
 
-        # 4. SLAM Toolbox
+        # 4. SLAM Toolbox (Using the Campus Config)
         Node(
             package='slam_toolbox',
             executable='async_slam_toolbox_node',
             name='slam_toolbox',
             output='screen',
-            parameters=[{
-                'odom_frame': 'odom',
-                'base_frame': 'base_link',
-                'scan_topic': '/scan',
-                'use_sim_time': False,
-                'resolution': 0.05
-            }]
+            parameters=[mapper_config] # <-- Changed this line!
         ),
 
         # 5. RViz
