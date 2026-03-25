@@ -37,6 +37,7 @@ setup(
             'camera_node = my_bot2.camera_processor:main',
             'master_brake = my_bot2.master_brake:main',
             'gui_node = my_bot2.gui_node:main', # Add this line!
+            'scan_cleaner = my_bot2.scan_cleaner:main',
         ],
     },
 )

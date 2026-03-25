@@ -10,9 +10,7 @@ def generate_launch_description():
     pkg = get_package_share_directory('my_bot2')
     nav2_params = os.path.join(pkg, 'config', 'hardware_nav2_params.yaml')
 
-    # ------------------------------------------------------------------ #
-    # 1. Lidar (RPLIDAR A1)                                               #
-    # ------------------------------------------------------------------ #
+    # 1. Lidar — publishes to /scan_raw
     lidar_node = Node(
         package='sllidar_ros2',
         executable='sllidar_node',
@@ -24,13 +22,41 @@ def generate_launch_description():
             'frame_id': 'laser',
             'angle_compensate': True,
             'scan_mode': 'Standard',
+            'inverted': False,
+            'angle_compensate': True,
+            'max_distance': 8.0,    # ← cap max range, prevents inf
         }],
+        
+        remappings=[('scan', '/scan_raw')],   # ← ADD THIS LINE HERE
+
         output='screen'
     )
+    
+    scan_cleaner_node = Node(
+      package='my_bot2',
+      executable='scan_cleaner',
+      name='scan_cleaner',
+      output='screen'
+    )
+    
+    
+#
+#    # 2. Laser Filter — removes inf values, publishes clean /scan
+#    scan_filter_node = Node(
+#        package='laser_filters',
+#        executable='scan_to_scan_filter_chain',
+#        name='scan_filter',
+#        parameters=[{
+#            'filter_chain_params_file': os.path.join(pkg, 'config', 'laser_filter.yaml')
+#        }],
+#        remappings=[
+#            ('scan', '/scan_raw'),
+#            ('scan_filtered', '/scan')
+#        ],
+#        output='screen'
+#    )
 
-    # ------------------------------------------------------------------ #
-    # 2. MAVROS (Pixhawk via USB)                                         #
-    # ------------------------------------------------------------------ #
+    # 3. MAVROS
     mavros_node = Node(
         package='mavros',
         executable='mavros_node',
@@ -44,9 +70,7 @@ def generate_launch_description():
         output='screen'
     )
 
-    # ------------------------------------------------------------------ #
-    # 3. Camera                                                            #
-    # ------------------------------------------------------------------ #
+    # 4. Camera
     camera_node = Node(
         package='v4l2_camera',
         executable='v4l2_camera_node',
@@ -59,9 +83,7 @@ def generate_launch_description():
         output='screen'
     )
 
-    # ------------------------------------------------------------------ #
-    # 4. Static TF: base_link → laser → camera                           #
-    # ------------------------------------------------------------------ #
+    # 5. Static TF
     tf_base_to_laser = Node(
         package='tf2_ros',
         executable='static_transform_publisher',
@@ -76,9 +98,7 @@ def generate_launch_description():
         arguments=['0.1', '0', '0.1', '0', '0', '0', 'laser', 'camera']
     )
 
-    # ------------------------------------------------------------------ #
-    # 5. RF2O Odometry (laser-based odom — no wheel encoders needed)     #
-    # ------------------------------------------------------------------ #
+    # 6. RF2O Odometry — delayed 6s
     rf2o_node = Node(
         package='rf2o_laser_odometry',
         executable='rf2o_laser_odometry_node',
@@ -94,19 +114,20 @@ def generate_launch_description():
         output='screen'
     )
 
-    # ------------------------------------------------------------------ #
-    # 6. Camera Safety Node (YOLO — person/cat/dog → emergency stop)     #
-    # ------------------------------------------------------------------ #
+    rf2o_delayed = TimerAction(
+        period=6.0,
+        actions=[rf2o_node]
+    )
+
+    # 7. Camera Safety Node
     camera_processor_node = Node(
         package='my_bot2',
-        executable='camera_processor',
+        executable='camera_node',
         name='camera_safety_node',
         output='screen'
     )
 
-    # ------------------------------------------------------------------ #
-    # 7. Master Brake (controls Pixhawk — Nav2 + Camera fusion)          #
-    # ------------------------------------------------------------------ #
+    # 8. Master Brake
     master_brake_node = Node(
         package='my_bot2',
         executable='master_brake',
@@ -114,9 +135,7 @@ def generate_launch_description():
         output='screen'
     )
 
-    # ------------------------------------------------------------------ #
-    # 8. Nav2 Stack (delayed 5s to let all sensors start first)          #
-    # ------------------------------------------------------------------ #
+    # 9. Nav2 Stack — delayed 8s
     map_server = Node(
         package='nav2_map_server',
         executable='map_server',
@@ -184,7 +203,7 @@ def generate_launch_description():
     )
 
     nav2_delayed = TimerAction(
-        period=5.0,
+        period=8.0,
         actions=[
             map_server,
             amcl,
@@ -196,16 +215,14 @@ def generate_launch_description():
         ]
     )
 
-    # ------------------------------------------------------------------ #
-    # Launch everything                                                    #
-    # ------------------------------------------------------------------ #
     return LaunchDescription([
         lidar_node,
+        scan_cleaner_node,
         mavros_node,
         camera_node,
         tf_base_to_laser,
         tf_laser_to_camera,
-        rf2o_node,
+        rf2o_delayed,
         camera_processor_node,
         master_brake_node,
         nav2_delayed,

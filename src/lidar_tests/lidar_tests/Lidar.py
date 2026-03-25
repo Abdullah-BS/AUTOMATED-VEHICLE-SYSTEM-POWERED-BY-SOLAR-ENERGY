@@ -12,23 +12,31 @@ class LidarRadar(Node):
             LaserScan, '/scan', self.listener_callback, 10)
         
         # --- RADAR GUI SETTINGS ---
-        self.max_dist = 5.0          # Max distance to show in meters
+        self.max_dist = 5.0          # Initial fallback distance
         self.window_size = 600       # Size of the GUI window in pixels
         self.center = self.window_size // 2
-        # Calculate how many pixels represents 1 meter
         self.scale = (self.window_size / 2) / self.max_dist 
 
         # Create the GUI window
         cv2.namedWindow("LiDAR Radar GUI", cv2.WINDOW_NORMAL)
 
     def listener_callback(self, msg):
+        # --- NEW: Dynamically adjust to the LiDAR's actual maximum hardware range ---
+        if msg.range_max > 0 and not math.isinf(msg.range_max):
+            self.max_dist = msg.range_max
+            self.scale = (self.window_size / 2) / self.max_dist
+
         # Create a blank black image
         frame = np.zeros((self.window_size, self.window_size, 3), dtype=np.uint8)
         
-        # Draw green distance rings (1m, 2m, 3m, 4m, 5m)
+        # Draw standard green distance rings (1m, 2m, 3m...)
         for i in range(1, int(self.max_dist) + 1):
             radius = int(i * self.scale)
             cv2.circle(frame, (self.center, self.center), radius, (0, 50, 0), 1)
+            
+        # --- NEW: Draw a bold orange boundary circle for the absolute MAX range ---
+        max_radius = int(self.max_dist * self.scale)
+        cv2.circle(frame, (self.center, self.center), max_radius, (0, 165, 255), 2)
         
         # Draw a red dot in the center for the LiDAR itself
         cv2.circle(frame, (self.center, self.center), 4, (0, 0, 255), -1)
@@ -36,7 +44,7 @@ class LidarRadar(Node):
         angle = msg.angle_min
         for r in msg.ranges:
             # Only plot valid points within our max distance
-            if not math.isinf(r) and msg.range_min < r < self.max_dist:
+            if not math.isinf(r) and msg.range_min < r <= self.max_dist:
                 
                 # Math: Polar to Cartesian (Meters)
                 x = r * math.cos(angle)
