@@ -1,3 +1,11 @@
+# =====================================================================
+# Nav2 parameters for the Ackermann cart
+#   Footprint: 1.25 m long x 0.65 m wide, base_link at geometric center
+#   Wheelbase: 0.65 m,  Max steering: 30 deg  ->  R_min ~= 1.13 m
+#   Controller : RegulatedPurePursuit (Ackermann friendly)
+#   Planner    : SmacHybrid-A* (kinematically feasible paths)
+# =====================================================================
+
 amcl:
   ros__parameters:
     use_sim_time: False
@@ -14,8 +22,8 @@ amcl:
     global_frame_id: "map"
     lambda_short: 0.1
     laser_likelihood_max_dist: 2.0
-    laser_max_range: 10.0
-    laser_min_range: 0.12
+    laser_max_range: 8.0
+    laser_min_range: 0.15
     laser_model_type: "likelihood_field"
     max_beams: 120
     max_particles: 2000
@@ -26,6 +34,8 @@ amcl:
     recovery_alpha_fast: 0.0
     recovery_alpha_slow: 0.0
     resample_interval: 1
+    # Cart IS Ackermann, but AMCL's motion model only affects particle spread.
+    # Differential model works fine here since rf2o supplies odometry.
     robot_model_type: "nav2_amcl::DifferentialMotionModel"
     save_pose_rate: 0.5
     sigma_hit: 0.2
@@ -38,6 +48,12 @@ amcl:
     z_rand: 0.5
     z_short: 0.05
     scan_topic: scan
+    set_initial_pose: true
+    initial_pose:
+      x: 0.0
+      y: 0.0
+      z: 0.0
+      yaw: 0.0
 
 bt_navigator:
   ros__parameters:
@@ -97,6 +113,10 @@ bt_navigator:
       - nav2_drive_on_heading_cancel_bt_node
       - nav2_is_battery_charging_condition_bt_node
 
+# =====================================================================
+# CONTROLLER  - Regulated Pure Pursuit
+#   Respects min turning radius, no in-place rotations.
+# =====================================================================
 controller_server:
   ros__parameters:
     use_sim_time: False
@@ -111,55 +131,44 @@ controller_server:
 
     progress_checker:
       plugin: "nav2_controller::SimpleProgressChecker"
-      required_movement_radius: 0.1
+      required_movement_radius: 0.2
       movement_time_allowance: 20.0
 
     general_goal_checker:
       stateful: True
       plugin: "nav2_controller::SimpleGoalChecker"
-      xy_goal_tolerance: 0.15
-      yaw_goal_tolerance: 0.15
+      xy_goal_tolerance: 0.30
+      yaw_goal_tolerance: 0.50   # loose - Ackermann cant snap to exact yaw
 
     FollowPath:
-      plugin: "dwb_core::DWBLocalPlanner"
-      debug_trajectory_details: True
-      min_vel_x: 0.0
-      min_vel_y: 0.0
-      max_vel_x: 1.0
-      max_vel_y: 0.0
-      max_vel_theta: 1.8
-      min_speed_xy: 0.0
-      max_speed_xy: 1.0
-      min_speed_theta: 0.0
-      acc_lim_x: 2.5
-      acc_lim_y: 0.0
-      acc_lim_theta: 3.2
-      decel_lim_x: -2.5
-      decel_lim_y: 0.0
-      decel_lim_theta: -3.2
-      vx_samples: 40
-      vy_samples: 1
-      vtheta_samples: 40
-      sim_time: 2.5
-      linear_granularity: 0.05
-      angular_granularity: 0.025
+      plugin: "nav2_regulated_pure_pursuit_controller::RegulatedPurePursuitController"
+      desired_linear_vel: 0.8         # nominal driving speed [m/s]
+      lookahead_dist: 1.0
+      min_lookahead_dist: 0.5
+      max_lookahead_dist: 1.5
+      lookahead_time: 1.5
+      use_velocity_scaled_lookahead_dist: true
+      rotate_to_heading_angular_vel: 0.0   # CAR CANNOT ROTATE IN PLACE
       transform_tolerance: 0.2
-      xy_goal_tolerance: 0.15
-      trans_stopped_velocity: 0.05
-      short_circuit_trajectory_evaluation: True
-      stateful: True
-      critics: ["RotateToGoal", "Oscillation", "BaseObstacle", "GoalAlign", "PathAlign", "PathDist", "GoalDist"]
-      BaseObstacle.scale: 0.02
-      PathAlign.scale: 45.0
-      PathAlign.forward_point_distance: 0.1
-      GoalAlign.scale: 24.0
-      GoalAlign.forward_point_distance: 0.1
-      PathDist.scale: 32.0
-      GoalDist.scale: 24.0
-      RotateToGoal.scale: 32.0
-      RotateToGoal.slowing_factor: 5.0
-      RotateToGoal.lookahead_time: -1.0
+      use_rotate_to_heading: false         # DISABLED for Ackermann
+      allow_reversing: false
+      min_approach_linear_velocity: 0.25
+      approach_velocity_scaling_dist: 1.0
+      max_allowed_time_to_collision_up_to_carrot: 1.0
+      use_regulated_linear_velocity_scaling: true
+      use_cost_regulated_linear_velocity_scaling: true
+      regulated_linear_scaling_min_radius: 1.2    # matches our R_min
+      regulated_linear_scaling_min_speed: 0.25
+      # Hard kinematic guard: the controller will NEVER output a turn tighter
+      # than this. 1.13 m is our geometric minimum - leaving a little margin.
+      use_collision_detection: true
+      max_angular_accel: 1.5
+      max_robot_pose_search_dist: 10.0
 
+# =====================================================================
+# LOCAL COSTMAP
+#   Footprint (not radius!) - honest 1.25 x 0.65 rectangle.
+# =====================================================================
 local_costmap:
   local_costmap:
     ros__parameters:
@@ -167,10 +176,13 @@ local_costmap:
       global_frame: odom
       robot_base_frame: base_link
       rolling_window: true
-      width: 3
-      height: 3
+      width: 6
+      height: 6
       resolution: 0.05
-      robot_radius: 0.22
+      # Rectangle around base_link (cart center).
+      # Points: FR, FL, RL, RR (x forward, y left).
+      footprint: "[[0.625, -0.325], [0.625, 0.325], [-0.625, 0.325], [-0.625, -0.325]]"
+      footprint_padding: 0.05
       transform_tolerance: 0.5
       update_frequency: 5.0
       publish_frequency: 2.0
@@ -184,16 +196,19 @@ local_costmap:
           data_type: "LaserScan"
           clearing: True
           marking: True
-          raytrace_max_range: 3.0
+          raytrace_max_range: 5.0
           raytrace_min_range: 0.0
-          obstacle_max_range: 2.5
+          obstacle_max_range: 4.0
           obstacle_min_range: 0.12
           max_obstacle_height: 2.0
       inflation_layer:
         plugin: "nav2_costmap_2d::InflationLayer"
-        inflation_radius: 0.45
+        inflation_radius: 0.4
         cost_scaling_factor: 3.0
 
+# =====================================================================
+# GLOBAL COSTMAP
+# =====================================================================
 global_costmap:
   global_costmap:
     ros__parameters:
@@ -203,7 +218,8 @@ global_costmap:
       global_frame: map
       robot_base_frame: base_link
       use_sim_time: False
-      robot_radius: 0.22
+      footprint: "[[0.625, -0.325], [0.625, 0.325], [-0.625, 0.325], [-0.625, -0.325]]"
+      footprint_padding: 0.05
       resolution: 0.05
       track_unknown_space: true
       plugins: ["static_layer", "obstacle_layer", "inflation_layer"]
@@ -217,9 +233,9 @@ global_costmap:
           clearing: True
           marking: True
           data_type: "LaserScan"
-          raytrace_max_range: 3.0
+          raytrace_max_range: 5.0
           raytrace_min_range: 0.0
-          obstacle_max_range: 2.5
+          obstacle_max_range: 4.0
           obstacle_min_range: 0.0
       static_layer:
         plugin: "nav2_costmap_2d::StaticLayer"
@@ -227,55 +243,74 @@ global_costmap:
       inflation_layer:
         plugin: "nav2_costmap_2d::InflationLayer"
         cost_scaling_factor: 3.0
-        inflation_radius: 0.45
+        inflation_radius: 0.3
 
+# =====================================================================
+# PLANNER  - Smac Hybrid-A*
+#   Plans kinematically feasible paths for a car with a given min radius.
+# =====================================================================
 planner_server:
   ros__parameters:
-    expected_planner_frequency: 5.0
+    expected_planner_frequency: 1.0
     use_sim_time: False
     planner_plugins: ["GridBased"]
     GridBased:
-      plugin: "nav2_navfn_planner/NavfnPlanner"
+      plugin: "nav2_smac_planner/SmacPlannerHybrid"
+      downsample_costmap: false
+      downsampling_factor: 1
       tolerance: 0.5
-      use_astar: false
       allow_unknown: true
+      max_iterations: 1000000
+      max_on_approach_iterations: 1000
+      max_planning_time: 5.0
+      motion_model_for_search: "DUBIN"  # Cart does NOT reverse while planning
+      angle_quantization_bins: 72
+      analytic_expansion_ratio: 3.5
+      analytic_expansion_max_length: 3.0
+      minimum_turning_radius: 1.2       # >= our physical R_min of 1.13 m
+      reverse_penalty: 2.0
+      change_penalty: 0.0
+      non_straight_penalty: 1.2
+      cost_penalty: 2.0
+      retrospective_penalty: 0.015
+      lookup_table_size: 20.0
+      cache_obstacle_heuristic: false
 
 behavior_server:
   ros__parameters:
     cycle_frequency: 15.0
-    behavior_plugins: ["spin", "backup", "drive_on_heading", "assisted_teleop", "wait"]
-    spin:
-      plugin: "nav2_behaviors/Spin"
+    behavior_plugins: ["backup", "drive_on_heading", "wait"]
+    # NOTE: removed "spin" - the cart cannot spin in place.
     backup:
       plugin: "nav2_behaviors/BackUp"
     drive_on_heading:
       plugin: "nav2_behaviors/DriveOnHeading"
     wait:
       plugin: "nav2_behaviors/Wait"
-    assisted_teleop:
-      plugin: "nav2_behaviors/AssistedTeleop"
     global_frame: odom
     robot_base_frame: base_link
     transform_tolerance: 0.1
     use_sim_time: False
     simulate_ahead_time: 2.0
-    max_rotational_vel: 1.8
-    min_rotational_vel: 0.4
-    rotational_acc_lim: 3.2
 
+# =====================================================================
+# VELOCITY SMOOTHER
+#   Caps what ever leaks out of the controller.
+# =====================================================================
 velocity_smoother:
   ros__parameters:
     use_sim_time: False
     smoothing_frequency: 20.0
     scale_velocities: False
     feedback: "OPEN_LOOP"
-    max_velocity: [1.0, 0.0, 1.8]
-    min_velocity: [-1.0, 0.0, -1.8]
-    max_accel: [2.5, 0.0, 3.2]
-    max_decel: [-2.5, 0.0, -3.2]
+    # x = forward m/s, y = strafe (ZERO), theta = yaw rate rad/s
+    max_velocity: [1.5, 0.0, 1.4]
+    min_velocity: [-0.7, 0.0, -1.4]
+    max_accel: [1.5, 0.0, 2.0]
+    max_decel: [-2.0, 0.0, -2.0]
     velocity_timeout: 1.0
 
 map_server:
   ros__parameters:
     use_sim_time: False
-    yaml_filename: "/home/abdullah/ros2_ws/src/my_mapper/maps/campus_map.yaml"
+    yaml_filename: "/home/abdullah/ros2_ws/src/my_mapper/maps/Lab_map.yaml"

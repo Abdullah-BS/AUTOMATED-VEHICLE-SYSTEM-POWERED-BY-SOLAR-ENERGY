@@ -55,28 +55,27 @@ class CameraMotorTest(Node):
         self._rc_pub.publish(rc)
 
     
-    def main(args = None):
-        rclpy.init(args=args)
-        node = CameraMotorTest()
-        try:
-            rclpy.spin(node)
-        
-        except KeyboardInterrupt:
-            rc = OverrideRCIn()
-            rc.channels = [65535] * 18
-            rc.channels[0] = STEERING_STRAIGHT
-            rc.channels[2] = THROTTLE_STOP
-            node._rc_pub.publish(rc)
-            node.get_logger().info("Keyboard interrupt")
+def main(args = None):
+    rclpy.init(args=args)
+    node = CameraMotorTest()
+    try:
+        rclpy.spin(node)
     
-        finally:
-            node.destroy_node()
-            try:
-                if rclpy.ok():
-                    rclpy.shutdown()
+    except KeyboardInterrupt:
+        rc = OverrideRCIn()
+        rc.channels = [65535] * 18
+        rc.channels[0] = STEERING_STRAIGHT
+        rc.channels[2] = THROTTLE_STOP
+        node._rc_pub.publish(rc)
+        node.get_logger().info("Keyboard interrupt")
 
-            except Exception:
-                pass
+    finally:
+        node.destroy_node()
+        try:
+            if rclpy.ok():
+                rclpy.shutdown()
+        except Exception:
+            pass
 
 if __name__ == '__main__':
     main()

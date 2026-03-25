@@ -100,7 +100,7 @@ def generate_launch_description():
             'publish_tf': True,
             'base_frame_id': 'base_link',
             'odom_frame_id': 'odom',
-            'init_pose_from_topic': '',
+            'init_pose_from_topic': '',   # ← ADD THIS (empty = start from identity)
             'freq': 10.0,
         }],
         output='screen'
@@ -250,7 +250,7 @@ def generate_launch_description():
     return LaunchDescription([
         x_arg, y_arg, yaw_arg,
         lidar_node,
-        #         mavros_node,
+        mavros_node,
         camera_node,
         tf_base_to_laser,
         tf_laser_to_camera,

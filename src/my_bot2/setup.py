@@ -39,6 +39,8 @@ setup(
             'camera_test = my_bot2.camera_motor_test:main',
             'gui_node = my_bot2.gui_node:main', # Add this line!
             'scan_cleaner = my_bot2.scan_cleaner:main',
+            'cmd_vel_to_rc = my_bot2.cmd_vel_to_rc:main',
+
         ],
     },
 )
