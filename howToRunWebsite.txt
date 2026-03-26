@@ -1,0 +1,9 @@
+
+Terminal 1:
+
+ahmed@DESKTOP-O16GSHD:~/ros2_ws$ ros2 run tf2_web_republisher tf2_web_republisher_node
+
+Terminal 2:
+ahmed@DESKTOP-O16GSHD:~/ros2_ws$ ros2 launch rosbridge_server rosbridge_websocket_launch.xml
+
+After Opening both terminal, just double click on the web.html file to run the website with ros connected to it.
