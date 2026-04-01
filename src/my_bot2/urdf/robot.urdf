@@ -16,21 +16,18 @@
       <geometry><box size="0.5 0.3 0.1"/></geometry>
     </collision>
     <inertial>
-      <!-- Pulled CoM down to ground level to prevent tipping -->
       <origin xyz="0 0 -0.05" rpy="0 0 0"/>
       <mass value="10.0"/>
       <inertia ixx="0.083" ixy="0" ixz="0" iyy="0.216" iyz="0" izz="0.283"/>
     </inertial>
   </link>
 
-  <!-- Increased Ground Clearance to 4cm (0.05 half chassis height + 0.04 clearance) -->
   <joint name="base_footprint_joint" type="fixed">
     <parent link="base_footprint"/>
     <child link="base_link"/>
     <origin xyz="0 0 0.09" rpy="0 0 0"/>
   </joint>
 
-  <!-- REAR LEFT WHEEL -->
   <link name="rear_left_wheel">
     <visual><geometry><cylinder radius="0.05" length="0.03"/></geometry><material name="black"/></visual>
     <collision><geometry><cylinder radius="0.05" length="0.03"/></geometry></collision>
@@ -44,7 +41,6 @@
     <axis xyz="0 0 1"/>
   </joint>
 
-  <!-- REAR RIGHT WHEEL -->
   <link name="rear_right_wheel">
     <visual><geometry><cylinder radius="0.05" length="0.03"/></geometry><material name="black"/></visual>
     <collision><geometry><cylinder radius="0.05" length="0.03"/></geometry></collision>
@@ -58,10 +54,8 @@
     <axis xyz="0 0 1"/>
   </joint>
 
-  <!-- FRONT LEFT CASTER WHEEL -->
   <link name="front_left_wheel">
     <visual><geometry><cylinder radius="0.05" length="0.03"/></geometry><material name="black"/></visual>
-    <!-- Shrunk collision sphere by 2mm to prevent 4-point wobble -->
     <collision><geometry><sphere radius="0.048"/></geometry></collision>
     <inertial><mass value="0.5"/><inertia ixx="0.0003" ixy="0" ixz="0" iyy="0.0003" iyz="0" izz="0.0006"/></inertial>
   </link>
@@ -73,10 +67,8 @@
     <axis xyz="0 0 1"/>
   </joint>
 
-  <!-- FRONT RIGHT CASTER WHEEL -->
   <link name="front_right_wheel">
     <visual><geometry><cylinder radius="0.05" length="0.03"/></geometry><material name="black"/></visual>
-    <!-- Shrunk collision sphere by 2mm -->
     <collision><geometry><sphere radius="0.048"/></geometry></collision>
     <inertial><mass value="0.5"/><inertia ixx="0.0003" ixy="0" ixz="0" iyy="0.0003" iyz="0" izz="0.0006"/></inertial>
   </link>
@@ -88,7 +80,6 @@
     <axis xyz="0 0 1"/>
   </joint>
 
-  <!-- LASER FRAME -->
   <link name="laser_frame">
     <visual><geometry><cylinder radius="0.05" length="0.04"/></geometry><material name="black"/></visual>
     <inertial><mass value="0.1"/><inertia ixx="0.0001" ixy="0" ixz="0" iyy="0.0001" iyz="0" izz="0.0001"/></inertial>
@@ -100,7 +91,6 @@
     <origin xyz="0.15 0 0.1" rpy="0 0 0"/>
   </joint>
 
-  <!-- GAZEBO PLUGINS -->
   <gazebo>
     <plugin name="diff_drive_controller" filename="libgazebo_ros_diff_drive.so">
       <update_rate>50</update_rate>
@@ -129,10 +119,10 @@
     <sensor name="lidar" type="ray">
       <always_on>true</always_on>
       <visualize>true</visualize>
-      <update_rate>10</update_rate>
+      <update_rate>20</update_rate>
       <ray>
         <scan><horizontal><samples>360</samples><min_angle>0.0</min_angle><max_angle>6.28</max_angle></horizontal></scan>
-        <range><min>0.12</min><max>12.0</max></range>
+        <range><min>0.05</min><max>12.0</max></range>
       </ray>
       <plugin name="laser_controller" filename="libgazebo_ros_ray_sensor.so">
         <ros><remapping>~/out:=/scan</remapping></ros>
@@ -142,30 +132,38 @@
     </sensor>
   </gazebo>
 
-  <!-- GAZEBO MATERIALS & PHYSICS -->
   <gazebo reference="base_link">
     <material>Gazebo/Blue</material>
   </gazebo>
   
   <gazebo reference="rear_left_wheel">
     <material>Gazebo/Black</material>
+    <mu1>1.0</mu1>
+    <mu2>1.0</mu2>
     <kp>1000000.0</kp>
     <kd>100.0</kd>
+    <minDepth>0.001</minDepth>
+    <maxVel>0.0</maxVel>
   </gazebo>
   
   <gazebo reference="rear_right_wheel">
     <material>Gazebo/Black</material>
+    <mu1>1.0</mu1>
+    <mu2>1.0</mu2>
     <kp>1000000.0</kp>
     <kd>100.0</kd>
+    <minDepth>0.001</minDepth>
+    <maxVel>0.0</maxVel>
   </gazebo>
   
   <gazebo reference="front_left_wheel">
     <material>Gazebo/Black</material>
-    <!-- Friction set to 0.0 so casters glide without catching the floor -->
     <mu1>0.0</mu1>
     <mu2>0.0</mu2>
     <kp>1000000.0</kp>
     <kd>100.0</kd>
+    <minDepth>0.001</minDepth>
+    <maxVel>0.0</maxVel>
   </gazebo>
   
   <gazebo reference="front_right_wheel">
@@ -174,6 +172,8 @@
     <mu2>0.0</mu2>
     <kp>1000000.0</kp>
     <kd>100.0</kd>
+    <minDepth>0.001</minDepth>
+    <maxVel>0.0</maxVel>
   </gazebo>
 
 </robot>
