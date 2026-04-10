@@ -15,7 +15,7 @@ amcl:
     lambda_short: 0.1
     laser_likelihood_max_dist: 2.0
     laser_max_range: 10.0
-    laser_min_range: 0.12
+    laser_min_range: 0.05
     laser_model_type: "likelihood_field"
     max_beams: 120
     max_particles: 2000
@@ -137,10 +137,10 @@ controller_server:
       decel_lim_x: -2.5
       decel_lim_y: 0.0
       decel_lim_theta: -3.2
-      vx_samples: 40           # Higher sampling for precision at speed
+      vx_samples: 20           # Reduced to save CPU/reduce lag
       vy_samples: 1
-      vtheta_samples: 40
-      sim_time: 2.5            # Looks further ahead on the path
+      vtheta_samples: 20       # Reduced to save CPU/reduce lag
+      sim_time: 1.5            # Reduced so it doesn't plan further than the costmap
       linear_granularity: 0.05
       angular_granularity: 0.025
       transform_tolerance: 0.2
@@ -167,12 +167,12 @@ local_costmap:
       global_frame: odom
       robot_base_frame: base_footprint
       rolling_window: true
-      width: 3
-      height: 3
+      width: 6                 # Increased to give 3m of forward visibility
+      height: 6                # Increased to give 3m of forward visibility
       resolution: 0.05
       footprint: "[ [0.25, 0.15], [0.25, -0.15], [-0.25, -0.15], [-0.25, 0.15] ]"
       transform_tolerance: 0.5
-      update_frequency: 5.0
+      update_frequency: 10.0   # Increased for faster obstacle detection
       publish_frequency: 2.0
       plugins: ["obstacle_layer", "inflation_layer"]
       obstacle_layer:
@@ -187,7 +187,7 @@ local_costmap:
           raytrace_max_range: 3.0
           raytrace_min_range: 0.0
           obstacle_max_range: 2.5
-          obstacle_min_range: 0.12
+          obstacle_min_range: 0.05
           max_obstacle_height: 2.0
           min_obstacle_height: 0.08
       inflation_layer:
@@ -222,14 +222,14 @@ global_costmap:
           raytrace_max_range: 3.0
           raytrace_min_range: 0.0
           obstacle_max_range: 2.5
-          obstacle_min_range: 0.12
+          obstacle_min_range: 0.05
       static_layer:
         plugin: "nav2_costmap_2d::StaticLayer"
         map_subscribe_transient_local: True
       inflation_layer:
         plugin: "nav2_costmap_2d::InflationLayer"
         cost_scaling_factor: 3.0
-        inflation_radius: 0.55
+        inflation_radius: 0.25
 
 planner_server:
   ros__parameters:

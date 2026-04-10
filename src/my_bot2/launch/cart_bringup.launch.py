@@ -1,123 +1,212 @@
 import os
-from ament_index_python.packages import get_package_share_directory
 from launch import LaunchDescription
-from launch.actions import IncludeLaunchDescription, TimerAction, DeclareLaunchArgument
-from launch.launch_description_sources import PythonLaunchDescriptionSource, AnyLaunchDescriptionSource
-from launch.substitutions import LaunchConfiguration
+from launch.actions import TimerAction
 from launch_ros.actions import Node
+from ament_index_python.packages import get_package_share_directory
+
 
 def generate_launch_description():
-    package_name = 'my_bot2'
-    nav2_params = os.path.join(get_package_share_directory(package_name), 'config', 'hardware_nav2_params.yaml')
 
-    # --- 1. SENSOR DRIVERS ---
-    
-    # Lidar (SLLidar A1)
-    lidar_launch = IncludeLaunchDescription(
-        PythonLaunchDescriptionSource(os.path.join(
-            get_package_share_directory('sllidar_ros2'), 'launch', 'sllidar_a1_launch.py'
-        )),
-        launch_arguments={'serial_port': '/dev/ttyUSB0'}.items()
+    pkg = get_package_share_directory('my_bot2')
+    nav2_params = os.path.join(pkg, 'config', 'hardware_nav2_params.yaml')
+
+    # ------------------------------------------------------------------ #
+    # 1. Lidar (RPLIDAR A1)                                               #
+    # ------------------------------------------------------------------ #
+    lidar_node = Node(
+        package='sllidar_ros2',
+        executable='sllidar_node',
+        name='sllidar_a1',
+        parameters=[{
+            'channel_type': 'serial',
+            'serial_port': '/dev/ttyUSB0',
+            'serial_baudrate': 115200,
+            'frame_id': 'laser',
+            'angle_compensate': True,
+            'scan_mode': 'Standard',
+        }],
+        output='screen'
     )
 
-    # MAVROS (Pixhawk/APM Connection)
-    mavros_launch = IncludeLaunchDescription(
-        AnyLaunchDescriptionSource(os.path.join(
-            get_package_share_directory('mavros'), 'launch', 'apm.launch'
-        )),
-        launch_arguments={'fcu_url': '/dev/ttyACM0:57600'}.items()
+    # ------------------------------------------------------------------ #
+    # 2. MAVROS (Pixhawk via USB)                                         #
+    # ------------------------------------------------------------------ #
+    mavros_node = Node(
+        package='mavros',
+        executable='mavros_node',
+        name='mavros',
+        parameters=[{
+            'fcu_url': '/dev/ttyACM0:57600',
+            'gcs_url': '',
+            'target_system_id': 1,
+            'target_component_id': 1,
+        }],
+        output='screen'
     )
 
-    # Camera
-    camera_driver = Node(
+    # ------------------------------------------------------------------ #
+    # 3. Camera                                                            #
+    # ------------------------------------------------------------------ #
+    camera_node = Node(
         package='v4l2_camera',
         executable='v4l2_camera_node',
-        name='camera_node',
-        parameters=[{'video_device': '/dev/video0', 'image_size': [640, 480]}]
+        name='v4l2_camera_node',
+        parameters=[{
+            'video_device': '/dev/video0',
+            'image_size': [640, 480],
+            'camera_frame_id': 'camera',
+        }],
+        output='screen'
     )
 
-    # --- 2. THE SKELETON (TF Tree) ---
-    # This is how the Lidar and Camera are "known" to the Cart
-    
-    # Cart Center -> Lidar (Adjust 1.0 if Lidar is further/closer to rear axle)
+    # ------------------------------------------------------------------ #
+    # 4. Static TF: base_link → laser → camera                           #
+    # ------------------------------------------------------------------ #
     tf_base_to_laser = Node(
         package='tf2_ros',
         executable='static_transform_publisher',
-        name='base_to_laser',
+        name='base_to_laser_tf',
         arguments=['1.0', '0', '0.5', '0', '0', '0', 'base_link', 'laser']
     )
 
-    # Lidar -> Camera (Based on your previous code)
     tf_laser_to_camera = Node(
         package='tf2_ros',
         executable='static_transform_publisher',
-        name='laser_to_camera',
+        name='laser_to_camera_tf',
         arguments=['0.1', '0', '0.1', '0', '0', '0', 'laser', 'camera']
     )
 
-    # --- 3. ODOMETRY (RF2O) ---
-    # This connects 'odom' to 'base_link' using Lidar scans
+    # ------------------------------------------------------------------ #
+    # 5. RF2O Odometry (laser-based odom — no wheel encoders needed)     #
+    # ------------------------------------------------------------------ #
     rf2o_node = Node(
         package='rf2o_laser_odometry',
         executable='rf2o_laser_odometry_node',
         name='rf2o_laser_odometry',
-        output='screen',
         parameters=[{
             'laser_scan_topic': '/scan',
             'odom_topic': '/odom',
             'publish_tf': True,
             'base_frame_id': 'base_link',
             'odom_frame_id': 'odom',
-            'init_pose_from_topic': '',
-            'freq': 20.0
-        }]
+            'freq': 10.0,
+        }],
+        output='screen'
     )
 
-    # --- 4. CUSTOM NODES (Safety & AI) ---
-    lidar_processor = Node(package=package_name, executable='lidar_node', name='lidar_processor')
-    camera_processor = Node(package=package_name, executable='camera_node', name='camera_processor')
-    master_brake = Node(package=package_name, executable='master_brake', name='master_brake')
+    # ------------------------------------------------------------------ #
+    # 6. Camera Safety Node (YOLO — person/cat/dog → emergency stop)     #
+    # ------------------------------------------------------------------ #
+    camera_processor_node = Node(
+        package='my_bot2',
+        executable='camera_processor',
+        name='camera_safety_node',
+        output='screen'
+    )
 
-    # --- 5. THE NAV2 BRAIN ---
-    # We include all the nodes from your successful desktop test
-    map_server = Node(package='nav2_map_server', executable='map_server', name='map_server', parameters=[nav2_params])
-    amcl = Node(package='nav2_amcl', executable='amcl', name='amcl', parameters=[nav2_params])
-    planner = Node(package='nav2_planner', executable='planner_server', name='planner_server', parameters=[nav2_params])
-    controller = Node(package='nav2_controller', executable='controller_server', name='controller_server', parameters=[nav2_params])
-    behaviors = Node(package='nav2_behaviors', executable='behavior_server', name='behavior_server', parameters=[nav2_params])
-    bt_navigator = Node(package='nav2_bt_navigator', executable='bt_navigator', name='bt_navigator', parameters=[nav2_params])
+    # ------------------------------------------------------------------ #
+    # 7. Master Brake (controls Pixhawk — Nav2 + Camera fusion)          #
+    # ------------------------------------------------------------------ #
+    master_brake_node = Node(
+        package='my_bot2',
+        executable='master_brake',
+        name='master_brake',
+        output='screen'
+    )
 
-    # Lifecycle Manager to boot them all
-    manager = TimerAction(
-        period=3.0,
+    # ------------------------------------------------------------------ #
+    # 8. Nav2 Stack (delayed 5s to let all sensors start first)          #
+    # ------------------------------------------------------------------ #
+    map_server = Node(
+        package='nav2_map_server',
+        executable='map_server',
+        name='map_server',
+        parameters=[nav2_params],
+        output='screen'
+    )
+
+    amcl = Node(
+        package='nav2_amcl',
+        executable='amcl',
+        name='amcl',
+        parameters=[nav2_params],
+        output='screen'
+    )
+
+    planner_server = Node(
+        package='nav2_planner',
+        executable='planner_server',
+        name='planner_server',
+        parameters=[nav2_params],
+        output='screen'
+    )
+
+    controller_server = Node(
+        package='nav2_controller',
+        executable='controller_server',
+        name='controller_server',
+        parameters=[nav2_params],
+        output='screen'
+    )
+
+    behavior_server = Node(
+        package='nav2_behaviors',
+        executable='behavior_server',
+        name='behavior_server',
+        parameters=[nav2_params],
+        output='screen'
+    )
+
+    bt_navigator = Node(
+        package='nav2_bt_navigator',
+        executable='bt_navigator',
+        name='bt_navigator',
+        parameters=[nav2_params],
+        output='screen'
+    )
+
+    lifecycle_manager = Node(
+        package='nav2_lifecycle_manager',
+        executable='lifecycle_manager',
+        name='lifecycle_manager_navigation',
+        parameters=[{
+            'autostart': True,
+            'node_names': [
+                'map_server',
+                'amcl',
+                'planner_server',
+                'controller_server',
+                'behavior_server',
+                'bt_navigator',
+            ]
+        }],
+        output='screen'
+    )
+
+    nav2_delayed = TimerAction(
+        period=5.0,
         actions=[
-            Node(
-                package='nav2_lifecycle_manager',
-                executable='lifecycle_manager',
-                name='lifecycle_manager',
-                parameters=[{
-                    'autostart': True,
-                    'node_names': ['map_server', 'amcl', 'planner_server', 'controller_server', 'behavior_server', 'bt_navigator']
-                }]
-            )
+            map_server,
+            amcl,
+            planner_server,
+            controller_server,
+            behavior_server,
+            bt_navigator,
+            lifecycle_manager,
         ]
     )
 
+    # ------------------------------------------------------------------ #
+    # Launch everything                                                    #
+    # ------------------------------------------------------------------ #
     return LaunchDescription([
-        lidar_launch,
-        mavros_launch,
-        camera_driver,
+        lidar_node,
+        mavros_node,
+        camera_node,
         tf_base_to_laser,
         tf_laser_to_camera,
         rf2o_node,
-        lidar_processor,
-        camera_processor,
-        master_brake,
-        map_server,
-        amcl,
-        planner,
-        controller,
-        behaviors,
-        bt_navigator,
-        manager
+        camera_processor_node,
+        master_brake_node,
+        nav2_delayed,
     ])

@@ -14,10 +14,10 @@ def generate_launch_description():
 
     rviz_config = os.path.join(pkg, 'rviz', 'slam_nav2.rviz')
 
-    
     params = os.path.join(pkg, 'config', 'nav2_params.yaml')
     map_yaml = os.path.join(pkg, 'maps', 'my_map.yaml')  # <-- change name
 
+    # REVERTED: Back to gazebo.launch.py so the 3D window opens
     gazebo = IncludeLaunchDescription(
         PythonLaunchDescriptionSource(
             os.path.join(get_package_share_directory('gazebo_ros'), 'launch', 'gazebo.launch.py')
@@ -35,7 +35,7 @@ def generate_launch_description():
     spawn = Node(
         package='gazebo_ros',
         executable='spawn_entity.py',
-        arguments=['-entity', 'my_bot2', '-topic', 'robot_description', '-z', '0.1'],
+        arguments=['-entity', 'my_bot2', '-topic', 'robot_description', '-y', '-1.0', '-z', '0.1'],
         output='screen'
     )
 
