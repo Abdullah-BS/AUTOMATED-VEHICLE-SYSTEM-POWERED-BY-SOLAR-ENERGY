@@ -11,6 +11,7 @@ def generate_launch_description():
     nav2_params = os.path.join(pkg, 'config', 'hardware_nav2_params.yaml')
 
     # 1. Lidar — publishes to /scan_raw
+    # 1. Lidar — publishes to /scan_raw
     lidar_node = Node(
         package='sllidar_ros2',
         executable='sllidar_node',
@@ -25,6 +26,8 @@ def generate_launch_description():
             'inverted': False,
             'angle_compensate': True,
             'max_distance': 8.0,    # ← cap max range, prevents inf
+            'angle_min': -1.5708,   # -90°
+            'angle_max':  1.5708,   # +90°
         }],
         
         remappings=[('scan', '/scan_raw')],   # ← ADD THIS LINE HERE
@@ -32,29 +35,6 @@ def generate_launch_description():
         output='screen'
     )
     
-    scan_cleaner_node = Node(
-      package='my_bot2',
-      executable='scan_cleaner',
-      name='scan_cleaner',
-      output='screen'
-    )
-    
-    
-#
-#    # 2. Laser Filter — removes inf values, publishes clean /scan
-#    scan_filter_node = Node(
-#        package='laser_filters',
-#        executable='scan_to_scan_filter_chain',
-#        name='scan_filter',
-#        parameters=[{
-#            'filter_chain_params_file': os.path.join(pkg, 'config', 'laser_filter.yaml')
-#        }],
-#        remappings=[
-#            ('scan', '/scan_raw'),
-#            ('scan_filtered', '/scan')
-#        ],
-#        output='screen'
-#    )
 
     # 3. MAVROS
     mavros_node = Node(
@@ -217,7 +197,6 @@ def generate_launch_description():
 
     return LaunchDescription([
         lidar_node,
-        scan_cleaner_node,
         mavros_node,
         camera_node,
         tf_base_to_laser,

@@ -13,7 +13,7 @@ def generate_launch_description():
 
     return LaunchDescription([
 
-        # 1. Lidar ? publishes raw scan to /scan_raw
+        # 1. Lidar — publishes 180° front scan directly to /scan
         Node(
             package='sllidar_ros2',
             executable='sllidar_node',
@@ -22,21 +22,14 @@ def generate_launch_description():
                 'serial_port': '/dev/ttyUSB0',
                 'serial_baudrate': 115200,
                 'frame_id': 'laser',
-                'angle_compensate': True
+                'angle_compensate': True,
+                'angle_min': -1.5708,   # -90°
+                'angle_max':  1.5708,   # +90°
             }],
-            remappings=[('scan', '/scan_raw')],
             output='screen'
         ),
 
-        # 2. Scan cleaner (from my_bot2) ? removes inf, crops to front 180�, publishes /scan
-        Node(
-            package='my_bot2',
-            executable='scan_cleaner',
-            name='scan_cleaner',
-            output='screen'
-        ),
-
-        # 3. TF: base_link ? laser
+        # 2. TF: base_link → laser
         Node(
             package='tf2_ros',
             executable='static_transform_publisher',
@@ -44,7 +37,7 @@ def generate_launch_description():
             output='screen'
         ),
 
-        # 4. RF2O odometry � delayed 5s so lidar + cleaner are ready
+        # 3. RF2O odometry — delayed 5s so lidar is ready
         TimerAction(period=5.0, actions=[
             Node(
                 package='rf2o_laser_odometry',
@@ -63,7 +56,7 @@ def generate_launch_description():
             )
         ]),
 
-        # 5. SLAM Toolbox
+        # 4. SLAM Toolbox
         Node(
             package='slam_toolbox',
             executable='async_slam_toolbox_node',
@@ -72,7 +65,7 @@ def generate_launch_description():
             output='screen'
         ),
 
-        # 6. RViz
+        # 5. RViz
         Node(
             package='rviz2',
             executable='rviz2',
