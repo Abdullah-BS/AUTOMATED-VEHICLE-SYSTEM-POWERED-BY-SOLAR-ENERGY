@@ -1,0 +1,614 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>KAU Autonomous Shuttle</title>
+    
+    <script type="text/javascript" src="https://cdn.jsdelivr.net/npm/eventemitter2@6/lib/eventemitter2.min.js"></script>
+    <script type="text/javascript" src="https://cdn.jsdelivr.net/npm/roslib@1/build/roslib.min.js"></script>
+    <script type="text/javascript" src="https://cdn.jsdelivr.net/npm/easeljs@1/lib/easeljs.min.js"></script>
+    <script type="text/javascript" src="https://cdn.jsdelivr.net/npm/ros2d@0/build/ros2d.min.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+
+    <style>
+        :root {
+            --bg-color: #121212;
+            --surface-color: #1e1e1e;
+            --surface-color-hover: #2a2a2a;
+            --text-primary: #ffffff;
+            --text-secondary: #b3b3b3;
+            --kau-green: #008000;
+            --kau-green-hover: #00a300;
+            --danger-red: #dc3545;
+            --danger-red-hover: #a71d2a;
+            --shadow-sm: 0 2px 4px rgba(0,0,0,0.5);
+            --shadow-lg: 0 10px 20px rgba(0,0,0,0.5);
+            --transition: all 0.2s ease-in-out;
+        }
+
+        * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+
+        body {
+            background-color: var(--bg-color);
+            color: var(--text-primary);
+            font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+            margin: 0; padding: 0; height: 100vh;
+            display: flex; flex-direction: column; overflow: hidden;
+        }
+
+        /* --- Header --- */
+        header {
+            background-color: var(--surface-color);
+            padding: 15px 25px;
+            display: flex; justify-content: space-between; align-items: center;
+            border-bottom: 2px solid #333; box-shadow: var(--shadow-sm);
+        }
+
+        .brand { display: flex; align-items: center; gap: 15px; }
+        .brand i { color: var(--kau-green); font-size: 24px; }
+        .brand h1 { margin: 0; font-size: 20px; font-weight: 600; letter-spacing: 1px; }
+
+        .conn-status {
+            background-color: rgba(255,255,255,0.05);
+            padding: 8px 15px; border-radius: 20px;
+            display: flex; align-items: center; gap: 10px;
+            font-size: 14px; color: var(--text-secondary);
+        }
+
+        #status-icon { height: 12px; width: 12px; border-radius: 50%; background-color: gray; }
+        .pulsing { box-shadow: 0 0 0 0 rgba(0, 128, 0, 0.7); animation: pulse 1.5s infinite; }
+        @keyframes pulse {
+            0% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(0, 128, 0, 0.7); }
+            70% { transform: scale(1); box-shadow: 0 0 0 10px rgba(0, 128, 0, 0); }
+            100% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(0, 128, 0, 0); }
+        }
+
+        /* --- Telemetry Bar --- */
+        .telemetry-bar {
+            background-color: var(--surface-color);
+            padding: 10px 20px; display: flex; justify-content: space-around;
+            border-bottom: 1px solid #333;
+        }
+        .tel-item { text-align: center; flex: 1; border-right: 1px solid #333; }
+        .tel-item:last-child { border-right: none; }
+        .tel-label { font-size: 11px; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 1px; margin-bottom: 5px;}
+        .tel-value { font-size: 20px; font-weight: bold; color: var(--kau-green); }
+        .tel-unit { font-size: 12px; color: var(--text-secondary); font-weight: normal; }
+
+        /* --- Main Content Area --- */
+        #app-content { flex: 1; position: relative; overflow: hidden; }
+        .page-view {
+            position: absolute; top: 0; left: 0; right: 0; bottom: 0;
+            padding: 20px; display: none; flex-direction: column; gap: 15px; overflow-y: auto;
+        }
+        .page-view.active { display: flex; }
+
+        /* --- Destinations Page --- */
+        .destination-grid {
+            display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 15px;
+        }
+        .dest-card {
+            background-color: var(--surface-color); border-radius: 12px;
+            display: flex; flex-direction: column; align-items: center; justify-content: center;
+            padding: 20px; cursor: pointer; border: 2px solid transparent; transition: var(--transition);
+        }
+        .dest-card:hover { background-color: var(--surface-color-hover); transform: translateY(-3px); }
+        .dest-card:active { transform: translateY(1px) scale(0.98); border-color: var(--kau-green); }
+        .dest-icon { font-size: 28px; color: var(--kau-green); margin-bottom: 10px; }
+        .dest-name { font-size: 15px; font-weight: 600; text-align: center; }
+
+        /* --- Map Page --- */
+        #map-container {
+            flex: 1; background-color: #222; border-radius: 12px;
+            display: flex; justify-content: center; align-items: center; overflow: hidden;
+            box-shadow: inset 0 0 15px rgba(0,0,0,0.8); position: relative;
+        }
+        #map-container canvas { width: 100% !important; height: 100% !important; object-fit: contain; }
+
+        /* --- Diagnostics Page --- */
+        .diag-list { background-color: var(--surface-color); border-radius: 12px; padding: 10px; }
+        .diag-item { display: flex; justify-content: space-between; padding: 15px; border-bottom: 1px solid #333; }
+        .diag-item:last-child { border-bottom: none; }
+        .text-good { color: var(--kau-green); font-weight: bold; }
+        .text-warn { color: #ffc107; font-weight: bold; }
+
+        /* =========================================
+           MANUAL CONTROL PAGE
+        ========================================= */
+        #page-manual {
+            justify-content: center;
+            align-items: center;
+        }
+
+        .manual-title {
+            font-size: 13px;
+            color: var(--text-secondary);
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            margin-bottom: 10px;
+        }
+
+        /* Camera stop indicator */
+        .camera-alert {
+            background-color: rgba(220, 53, 69, 0.15);
+            border: 1px solid var(--danger-red);
+            border-radius: 10px;
+            padding: 10px 20px;
+            font-size: 13px;
+            color: var(--danger-red);
+            font-weight: bold;
+            display: none;
+            align-items: center;
+            gap: 8px;
+        }
+        .camera-alert.visible { display: flex; }
+
+        /* D-pad container */
+        .dpad {
+            display: grid;
+            grid-template-columns: repeat(3, 90px);
+            grid-template-rows: repeat(3, 90px);
+            gap: 10px;
+            margin: 20px 0;
+        }
+
+        .dpad-btn {
+            background-color: var(--surface-color);
+            border: 2px solid #333;
+            border-radius: 16px;
+            color: white;
+            font-size: 28px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: var(--transition);
+            user-select: none;
+            -webkit-user-select: none;
+            touch-action: none;
+        }
+
+        .dpad-btn:active,
+        .dpad-btn.pressed {
+            background-color: var(--kau-green);
+            border-color: var(--kau-green);
+            transform: scale(0.94);
+        }
+
+        .dpad-btn.stop-btn {
+            background-color: #2a2a2a;
+            border-color: #555;
+            font-size: 18px;
+            font-weight: bold;
+            color: #aaa;
+        }
+        .dpad-btn.stop-btn:active,
+        .dpad-btn.stop-btn.pressed {
+            background-color: var(--danger-red);
+            border-color: var(--danger-red);
+            color: white;
+        }
+
+        /* Speed slider */
+        .speed-control {
+            background-color: var(--surface-color);
+            border-radius: 12px;
+            padding: 16px 24px;
+            width: 290px;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+        .speed-header {
+            display: flex;
+            justify-content: space-between;
+            font-size: 13px;
+            color: var(--text-secondary);
+        }
+        #speed-val {
+            color: var(--kau-green);
+            font-weight: bold;
+        }
+        input[type=range] {
+            width: 100%;
+            accent-color: var(--kau-green);
+            cursor: pointer;
+        }
+
+        /* --- Bottom Tab Bar --- */
+        footer {
+            background-color: var(--surface-color); padding: 10px 15px;
+            display: flex; gap: 10px; border-top: 2px solid #333;
+        }
+        .tab-btn {
+            flex: 1; background-color: transparent; border: none; color: var(--text-secondary);
+            font-size: 12px; font-weight: 600; display: flex; flex-direction: column; align-items: center; gap: 5px;
+            cursor: pointer; padding: 10px; border-radius: 8px; transition: var(--transition);
+        }
+        .tab-btn i { font-size: 20px; }
+        .tab-btn.active { color: var(--kau-green); background-color: rgba(0, 128, 0, 0.1); }
+
+        .btn-estop {
+            flex: 1.5; background-color: var(--danger-red); border: none; color: white; font-size: 16px; font-weight: bold;
+            display: flex; align-items: center; justify-content: center; gap: 8px; border-radius: 8px; cursor: pointer;
+        }
+        .btn-estop:active { transform: scale(0.95); background-color: var(--danger-red-hover); }
+    </style>
+</head>
+<body>
+
+    <header>
+        <div class="brand">
+            <i class="fas fa-satellite-dish"></i>
+            <h1>KAU SHUTTLE</h1>
+        </div>
+        <div class="conn-status">
+            <div id="status-icon"></div>
+            <span id="status-text">Connecting...</span>
+        </div>
+    </header>
+
+    <div class="telemetry-bar">
+        <div class="tel-item">
+            <div class="tel-label">Speed</div>
+            <div class="tel-value" id="tel-speed">0.0 <span class="tel-unit">m/s</span></div>
+        </div>
+        <div class="tel-item">
+            <div class="tel-label">Battery</div>
+            <div class="tel-value">78 <span class="tel-unit">%</span></div>
+        </div>
+        <div class="tel-item">
+            <div class="tel-label">Target</div>
+            <div class="tel-value" style="font-size: 14px; margin-top: 5px; color: #fff;">Standby</div>
+        </div>
+    </div>
+
+    <div id="app-content">
+
+        <!-- ── NAVIGATE PAGE ──────────────────────────────── -->
+        <div id="page-nav" class="page-view active">
+            <h2 style="margin-top: 0;">Select Destination</h2>
+            <div class="destination-grid">
+                <div class="dest-card" onclick="sendCommand('Engineering Building')">
+                    <i class="fas fa-university dest-icon"></i><span class="dest-name">Engineering</span>
+                </div>
+                <div class="dest-card" onclick="sendCommand('Cafeteria')">
+                    <i class="fas fa-coffee dest-icon"></i><span class="dest-name">Cafeteria</span>
+                </div>
+                <div class="dest-card" onclick="sendCommand('Main Library')">
+                    <i class="fas fa-book dest-icon"></i><span class="dest-name">Main Library</span>
+                </div>
+                <div class="dest-card" onclick="sendCommand('Central Mosque')">
+                    <i class="fas fa-mosque dest-icon"></i><span class="dest-name">Central Mosque</span>
+                </div>
+                <div class="dest-card" onclick="sendCommand('Home Base')">
+                    <i class="fas fa-charging-station dest-icon"></i><span class="dest-name">Charging Station</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- ── MAP PAGE ───────────────────────────────────── -->
+        <div id="page-map" class="page-view">
+            <h2 style="margin-top: 0; display: flex; justify-content: space-between;">
+                Live Navigation
+                <span style="font-size: 12px; color: gray; font-weight: normal;">Powered by RViz2 Web</span>
+            </h2>
+            <div id="map-container">
+                <p id="map-loading-text" style="color: gray;">Waiting for Map Data...</p>
+            </div>
+        </div>
+
+        <!-- ── DIAGNOSTICS PAGE ───────────────────────────── -->
+        <div id="page-diag" class="page-view">
+            <h2 style="margin-top: 0;">System Diagnostics</h2>
+            <div class="diag-list">
+                <div class="diag-item"><span>SLLidar Status</span><span class="text-good"><i class="fas fa-check-circle"></i> Running</span></div>
+                <div class="diag-item"><span>Odometry (RF2O)</span><span class="text-good"><i class="fas fa-check-circle"></i> Good</span></div>
+                <div class="diag-item"><span>MAVROS</span><span class="text-good"><i class="fas fa-check-circle"></i> Connected</span></div>
+                <div class="diag-item"><span>Camera Safety</span><span id="diag-camera" class="text-good"><i class="fas fa-check-circle"></i> Clear</span></div>
+            </div>
+        </div>
+
+        <!-- ── MANUAL CONTROL PAGE ────────────────────────── -->
+        <div id="page-manual" class="page-view">
+
+            <div class="manual-title">Manual Drive Control</div>
+
+            <!-- Camera stop alert -->
+            <div class="camera-alert" id="camera-alert">
+                <i class="fas fa-exclamation-triangle"></i>
+                CAMERA STOP — Person / Animal Detected
+            </div>
+
+            <!-- D-pad -->
+            <div class="dpad">
+                <!-- Row 1: empty | Forward | empty -->
+                <div></div>
+                <button class="dpad-btn" id="btn-fwd"
+                    onmousedown="startMove(0.35,0)"   onmouseup="stopMove()"   onmouseleave="stopMove()"
+                    ontouchstart="startMove(0.35,0)"  ontouchend="stopMove()">
+                    <i class="fas fa-arrow-up"></i>
+                </button>
+                <div></div>
+
+                <!-- Row 2: Left | Stop | Right -->
+                <button class="dpad-btn" id="btn-left"
+                    onmousedown="startMove(0,0.5)"    onmouseup="stopMove()"   onmouseleave="stopMove()"
+                    ontouchstart="startMove(0,0.5)"   ontouchend="stopMove()">
+                    <i class="fas fa-arrow-left"></i>
+                </button>
+                <button class="dpad-btn stop-btn" id="btn-stop" onclick="stopMove()">
+                    STOP
+                </button>
+                <button class="dpad-btn" id="btn-right"
+                    onmousedown="startMove(0,-0.5)"   onmouseup="stopMove()"   onmouseleave="stopMove()"
+                    ontouchstart="startMove(0,-0.5)"  ontouchend="stopMove()">
+                    <i class="fas fa-arrow-right"></i>
+                </button>
+
+                <!-- Row 3: empty | Backward | empty -->
+                <div></div>
+                <button class="dpad-btn" id="btn-bwd"
+                    onmousedown="startMove(-0.3,0)"   onmouseup="stopMove()"   onmouseleave="stopMove()"
+                    ontouchstart="startMove(-0.3,0)"  ontouchend="stopMove()">
+                    <i class="fas fa-arrow-down"></i>
+                </button>
+                <div></div>
+            </div>
+
+            <!-- Speed slider -->
+            <div class="speed-control">
+                <div class="speed-header">
+                    <span><i class="fas fa-tachometer-alt"></i> Speed</span>
+                    <span id="speed-val">0.35 m/s</span>
+                </div>
+                <input type="range" id="speed-slider" min="0.1" max="0.8" step="0.05" value="0.35"
+                    oninput="updateSpeed(this.value)">
+            </div>
+
+        </div>
+
+    </div><!-- /#app-content -->
+
+    <!-- ── FOOTER TAB BAR ─────────────────────────────── -->
+    <footer>
+        <button class="tab-btn active" id="tab-nav" onclick="switchTab('nav', this)">
+            <i class="fas fa-map-marker-alt"></i>Navigate
+        </button>
+        <button class="tab-btn" id="tab-manual" onclick="switchTab('manual', this)">
+            <i class="fas fa-gamepad"></i>Manual
+        </button>
+        <button class="btn-estop" onclick="emergencyStop()">
+            <i class="fas fa-stop-circle"></i> E-STOP
+        </button>
+        <button class="tab-btn" id="tab-map" onclick="switchTab('map', this); initMap();">
+            <i class="fas fa-map"></i>Map
+        </button>
+        <button class="tab-btn" id="tab-diag" onclick="switchTab('diag', this)">
+            <i class="fas fa-stethoscope"></i>Status
+        </button>
+    </footer>
+
+    <script>
+        // =========================================================
+        // 1. ROS CONNECTION
+        //    Change the IP below to your Jetson's IP (192.168.2.2)
+        // =========================================================
+        var JETSON_IP = '192.168.2.2';
+
+        var ros = new ROSLIB.Ros({
+            url : 'ws://' + JETSON_IP + ':9090'
+        });
+
+        var statusIcon = document.getElementById("status-icon");
+        var statusText = document.getElementById("status-text");
+
+        ros.on('connection', function() {
+            statusText.innerHTML = "Connected";
+            statusIcon.style.backgroundColor = "var(--kau-green)";
+            statusIcon.classList.add("pulsing");
+        });
+
+        ros.on('error', function(error) {
+            statusText.innerHTML = "Conn. Error";
+            statusIcon.style.backgroundColor = "var(--danger-red)";
+            statusIcon.classList.remove("pulsing");
+        });
+
+        ros.on('close', function() {
+            statusText.innerHTML = "Conn. Closed";
+            statusIcon.style.backgroundColor = "gray";
+            statusIcon.classList.remove("pulsing");
+        });
+
+        // =========================================================
+        // 2. PUBLISHERS
+        // =========================================================
+
+        // Destination commands (existing)
+        var uiTopic = new ROSLIB.Topic({
+            ros : ros,
+            name : '/web_commands',
+            messageType : 'std_msgs/String'
+        });
+
+        // /cmd_vel → goes to master_brake → MAVROS → Pixhawk
+        var cmdVelTopic = new ROSLIB.Topic({
+            ros : ros,
+            name : '/cmd_vel',
+            messageType : 'geometry_msgs/Twist'
+        });
+
+        function sendCommand(destination) {
+            if (window.navigator && window.navigator.vibrate) window.navigator.vibrate(30);
+            var msg = new ROSLIB.Message({ data : destination });
+            uiTopic.publish(msg);
+        }
+
+        // =========================================================
+        // 3. CAMERA STOP SIGNAL SUBSCRIBER
+        // =========================================================
+        var cameraAlert   = document.getElementById('camera-alert');
+        var diagCamera    = document.getElementById('diag-camera');
+
+        var cameraSub = new ROSLIB.Topic({
+            ros : ros,
+            name : '/camera_stop_signal',
+            messageType : 'std_msgs/Bool'
+        });
+
+        cameraSub.subscribe(function(msg) {
+            if (msg.data) {
+                cameraAlert.classList.add('visible');
+                diagCamera.innerHTML = '<i class="fas fa-exclamation-circle"></i> PERSON DETECTED';
+                diagCamera.className = 'text-warn';
+            } else {
+                cameraAlert.classList.remove('visible');
+                diagCamera.innerHTML = '<i class="fas fa-check-circle"></i> Clear';
+                diagCamera.className = 'text-good';
+            }
+        });
+
+        // =========================================================
+        // 4. MANUAL DRIVE CONTROL
+        // =========================================================
+        var driveSpeed   = 0.35;   // default linear speed (m/s)
+        var turnSpeed    = 0.5;    // angular speed (rad/s)
+        var moveInterval = null;
+        var currentLinear  = 0;
+        var currentAngular = 0;
+
+        function updateSpeed(val) {
+            driveSpeed = parseFloat(val);
+            document.getElementById('speed-val').textContent = driveSpeed.toFixed(2) + ' m/s';
+        }
+
+        function publishTwist(linear, angular) {
+            var msg = new ROSLIB.Message({
+                linear  : { x: linear,  y: 0.0, z: 0.0 },
+                angular : { x: 0.0, y: 0.0, z: angular }
+            });
+            cmdVelTopic.publish(msg);
+        }
+
+        function startMove(lin, ang) {
+            // Scale by speed slider — only for linear component
+            currentLinear  = lin  !== 0 ? (lin > 0 ? driveSpeed : -driveSpeed * 0.8) : 0;
+            currentAngular = ang;
+
+            if (moveInterval) clearInterval(moveInterval);
+            publishTwist(currentLinear, currentAngular);
+            // Keep publishing at 10 Hz while button is held
+            moveInterval = setInterval(function() {
+                publishTwist(currentLinear, currentAngular);
+            }, 100);
+        }
+
+        function stopMove() {
+            if (moveInterval) { clearInterval(moveInterval); moveInterval = null; }
+            publishTwist(0.0, 0.0);
+        }
+
+        function emergencyStop() {
+            stopMove();
+            sendCommand('EMERGENCY STOP');
+            if (window.navigator && window.navigator.vibrate) window.navigator.vibrate([100, 50, 100]);
+        }
+
+        // =========================================================
+        // 5. TAB SWITCHING
+        // =========================================================
+        function switchTab(pageId, btnElement) {
+            document.querySelectorAll('.page-view').forEach(p => p.classList.remove('active'));
+            document.getElementById('page-' + pageId).classList.add('active');
+            document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+            if (btnElement) btnElement.classList.add('active');
+        }
+
+        // =========================================================
+        // 6. LIVE MAP
+        // =========================================================
+        var viewer, gridClient, robotMarker, pathShape;
+
+        function initMap() {
+            if (viewer) return;
+            document.getElementById('map-loading-text').style.display = 'none';
+
+            viewer = new ROS2D.Viewer({
+                divID : 'map-container',
+                width : 1000,
+                height : 1000,
+                background: '#888888'
+            });
+
+            gridClient = new ROS2D.OccupancyGridClient({
+                ros : ros,
+                rootObject : viewer.scene,
+                continuous: true,
+                topic: '/map'
+            });
+
+            gridClient.on('change', function(){
+                viewer.scaleToDimensions(gridClient.currentGrid.width, gridClient.currentGrid.height);
+                viewer.shift(gridClient.currentGrid.pose.position.x, gridClient.currentGrid.pose.position.y);
+            });
+
+            robotMarker = new createjs.Shape();
+            robotMarker.graphics.beginFill("#008000");
+            robotMarker.graphics.moveTo(-4, -3);
+            robotMarker.graphics.lineTo(6, 0);
+            robotMarker.graphics.lineTo(-4, 3);
+            robotMarker.graphics.lineTo(-4, -3);
+            robotMarker.graphics.endFill();
+            robotMarker.graphics.setStrokeStyle(0.5).beginStroke("#ffffff").closePath();
+            robotMarker.scaleX = 0.5;
+            robotMarker.scaleY = 0.5;
+            robotMarker.visible = false;
+            viewer.scene.addChild(robotMarker);
+
+            var poseListener = new ROSLIB.Topic({
+                ros : ros,
+                name : '/amcl_pose',
+                messageType : 'geometry_msgs/PoseWithCovarianceStamped'
+            });
+
+            poseListener.subscribe(function(msg) {
+                var pose = msg.pose.pose;
+                robotMarker.x = pose.position.x;
+                robotMarker.y = -pose.position.y;
+                var q = pose.orientation;
+                var yaw = Math.atan2(2.0*(q.w*q.z + q.x*q.y), 1.0 - 2.0*(q.y*q.y + q.z*q.z));
+                robotMarker.rotation = -yaw * (180.0 / Math.PI);
+                robotMarker.visible = true;
+                viewer.shift(pose.position.x, pose.position.y);
+                viewer.scene.scaleX = 15.0;
+                viewer.scene.scaleY = 15.0;
+            });
+
+            var pathListener = new ROSLIB.Topic({
+                ros : ros,
+                name : '/plan',
+                messageType : 'nav_msgs/Path'
+            });
+
+            pathShape = new createjs.Shape();
+            viewer.scene.addChild(pathShape);
+
+            pathListener.subscribe(function(msg) {
+                pathShape.graphics.clear();
+                pathShape.graphics.setStrokeStyle(0.1).beginStroke("rgba(0, 255, 0, 0.7)");
+                if(msg.poses.length > 0) {
+                    var start = msg.poses[0].pose.position;
+                    pathShape.graphics.moveTo(start.x, -start.y);
+                    for(var i = 1; i < msg.poses.length; i++) {
+                        var pt = msg.poses[i].pose.position;
+                        pathShape.graphics.lineTo(pt.x, -pt.y);
+                    }
+                }
+                pathShape.graphics.endStroke();
+            });
+        }
+    </script>
+</body>
+</html>

@@ -14,17 +14,17 @@ def generate_launch_description():
     # ---------------------------------------------------------------
     # Launch arguments for AMCL initial pose
     #   ros2 launch my_bot2 cart_bringup.launch.py x:=3.5 y:=1.2 yaw:=1.57
-    # ---------------------------------------------------------------
-    x_arg   = DeclareLaunchArgument('x',   default_value='0.0',
-                                    description='AMCL initial pose X in map frame [m]')
-    y_arg   = DeclareLaunchArgument('y',   default_value='0.0',
-                                    description='AMCL initial pose Y in map frame [m]')
-    yaw_arg = DeclareLaunchArgument('yaw', default_value='0.0',
-                                    description='AMCL initial pose yaw in map frame [rad]')
+    # # ---------------------------------------------------------------
+    # x_arg   = DeclareLaunchArgument('x',   default_value='0.0',
+    #                                 description='AMCL initial pose X in map frame [m]')
+    # y_arg   = DeclareLaunchArgument('y',   default_value='0.0',
+    #                                 description='AMCL initial pose Y in map frame [m]')
+    # yaw_arg = DeclareLaunchArgument('yaw', default_value='0.0',
+    #                                 description='AMCL initial pose yaw in map frame [rad]')
 
-    x_val   = LaunchConfiguration('x')
-    y_val   = LaunchConfiguration('y')
-    yaw_val = LaunchConfiguration('yaw')
+    # x_val   = LaunchConfiguration('x')
+    # y_val   = LaunchConfiguration('y')
+    # yaw_val = LaunchConfiguration('yaw')
 
     # 1. Lidar — publishes cropped scan directly to /scan (driver was patched)
     lidar_node = Node(
@@ -174,11 +174,11 @@ def generate_launch_description():
         parameters=[
             nav2_params,
             {
-                'set_initial_pose': True,
-                'initial_pose.x':   x_val,
-                'initial_pose.y':   y_val,
-                'initial_pose.z':   0.0,
-                'initial_pose.yaw': yaw_val,
+                'set_initial_pose': False,
+                # 'initial_pose.x':   x_val,
+                # 'initial_pose.y':   y_val,
+                # 'initial_pose.z':   0.0,
+                # 'initial_pose.yaw': yaw_val,
             }
         ],
         output='screen'
@@ -248,7 +248,7 @@ def generate_launch_description():
     )
 
     return LaunchDescription([
-        x_arg, y_arg, yaw_arg,
+        # x_arg, y_arg, yaw_arg,
         lidar_node,
         #         mavros_node,
         camera_node,
@@ -260,3 +260,4 @@ def generate_launch_description():
         cmd_vel_bridge_delayed,
         nav2_delayed,
     ])
+    
