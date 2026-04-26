@@ -11,22 +11,7 @@ def generate_launch_description():
     pkg = get_package_share_directory('my_bot2')
     nav2_params = os.path.join(pkg, 'config', 'hardware_nav2_params.yaml')
 
-    # ---------------------------------------------------------------
-    # Launch arguments for AMCL initial pose
-    #   ros2 launch my_bot2 cart_bringup.launch.py x:=3.5 y:=1.2 yaw:=1.57
-    # # ---------------------------------------------------------------
-    # x_arg   = DeclareLaunchArgument('x',   default_value='0.0',
-    #                                 description='AMCL initial pose X in map frame [m]')
-    # y_arg   = DeclareLaunchArgument('y',   default_value='0.0',
-    #                                 description='AMCL initial pose Y in map frame [m]')
-    # yaw_arg = DeclareLaunchArgument('yaw', default_value='0.0',
-    #                                 description='AMCL initial pose yaw in map frame [rad]')
-
-    # x_val   = LaunchConfiguration('x')
-    # y_val   = LaunchConfiguration('y')
-    # yaw_val = LaunchConfiguration('yaw')
-
-    # 1. Lidar — publishes cropped scan directly to /scan (driver was patched)
+    # 1. Lidar
     lidar_node = Node(
         package='sllidar_ros2',
         executable='sllidar_node',
@@ -44,11 +29,10 @@ def generate_launch_description():
         output='screen'
     )
 
-    # 3. MAVROS
+    # 3. MAVROS — starts immediately so heartbeat is ready before the RC bridge
     mavros_node = Node(
         package='mavros',
         executable='mavros_node',
-        name='mavros',
         parameters=[{
             'fcu_url': '/dev/ttyACM0:57600',
             'gcs_url': '',
@@ -71,10 +55,7 @@ def generate_launch_description():
         output='screen'
     )
 
-    # 5. Static TF
-    #    Lidar is mounted on the FRONT of the cart, 0.5 m above base_link,
-    #    and rotated 180° (its 0° points toward the rear of the cart).
-    #    args = [x, y, z, yaw, pitch, roll, parent, child]
+    # 5. Static TFs
     tf_base_to_laser = Node(
         package='tf2_ros',
         executable='static_transform_publisher',
@@ -89,7 +70,7 @@ def generate_launch_description():
         arguments=['0.1', '0', '0.1', '0', '0', '0', 'laser', 'camera']
     )
 
-    # 6. RF2O Odometry — delayed 6s
+    # 6. RF2O Odometry — delayed 6s (waits for lidar scan to stabilise)
     rf2o_node = Node(
         package='rf2o_laser_odometry',
         executable='rf2o_laser_odometry_node',
@@ -106,10 +87,7 @@ def generate_launch_description():
         output='screen'
     )
 
-    rf2o_delayed = TimerAction(
-        period=6.0,
-        actions=[rf2o_node]
-    )
+    rf2o_delayed = TimerAction(period=6.0, actions=[rf2o_node])
 
     # 7. Camera Safety Node
     camera_processor_node = Node(
@@ -128,14 +106,15 @@ def generate_launch_description():
     )
 
     # 8b. cmd_vel -> Pixhawk RC-override bridge
-    #     Takes Nav2's Twist output and drives RC channels 1 (steer) / 3 (throttle).
+    #     Delayed 7s — MAVROS needs ~3-5s to establish a heartbeat with the FCU.
+    #     The extra margin ensures OverrideRCIn is not dropped at startup.
     cmd_vel_bridge = Node(
         package='my_bot2',
         executable='cmd_vel_to_rc',
         name='cmd_vel_to_rc',
         parameters=[{
             'wheelbase_m':          0.65,
-            'max_steer_rad':        0.5236,   # 30 deg
+            'max_steer_rad':        0.5236,
             'throttle_neutral_us':  1500,
             'throttle_fwd_us':      1800,
             'throttle_back_us':     1300,
@@ -150,13 +129,9 @@ def generate_launch_description():
         output='screen'
     )
 
-    # Delay until MAVROS is fully up (~5 s for heartbeat).
-    cmd_vel_bridge_delayed = TimerAction(
-        period=7.0,
-        actions=[cmd_vel_bridge]
-    )
+    cmd_vel_bridge_delayed = TimerAction(period=7.0, actions=[cmd_vel_bridge])
 
-    # 9. Nav2 Stack — delayed 8s
+    # 9. Nav2 Stack — delayed 8s (after MAVROS + RF2O are settled)
     map_server = Node(
         package='nav2_map_server',
         executable='map_server',
@@ -165,22 +140,11 @@ def generate_launch_description():
         output='screen'
     )
 
-    # AMCL is fed BOTH the yaml file AND the launch-arg initial pose.
-    # The dict below overrides the yaml values for initial_pose.*
     amcl = Node(
         package='nav2_amcl',
         executable='amcl',
         name='amcl',
-        parameters=[
-            nav2_params,
-            {
-                'set_initial_pose': False,
-                # 'initial_pose.x':   x_val,
-                # 'initial_pose.y':   y_val,
-                # 'initial_pose.z':   0.0,
-                # 'initial_pose.yaw': yaw_val,
-            }
-        ],
+        parameters=[nav2_params, {'set_initial_pose': False}],
         output='screen'
     )
 
@@ -248,9 +212,8 @@ def generate_launch_description():
     )
 
     return LaunchDescription([
-        # x_arg, y_arg, yaw_arg,
         lidar_node,
-        #         mavros_node,
+        mavros_node,           # ← THE FIX: was commented out before
         camera_node,
         tf_base_to_laser,
         tf_laser_to_camera,
@@ -260,4 +223,3 @@ def generate_launch_description():
         cmd_vel_bridge_delayed,
         nav2_delayed,
     ])
-    

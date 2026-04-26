@@ -1,0 +1,13 @@
+terminal 1:
+cd ~/ros2_ws && source install/setup.bash
+ros2 launch my_bot2 manual_control.launch.py
+
+terminal 2:
+python3 /tmp/print_cmdvel.py
+
+terminal 3:
+cd ~/ros2_ws
+python3 -m http.server 8000
+
+browser:
+http://192.168.2.2:8000/web_manual.html

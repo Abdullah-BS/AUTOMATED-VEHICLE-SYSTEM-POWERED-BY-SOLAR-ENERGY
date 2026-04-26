@@ -75,3 +75,15 @@ mavproxy.py --master=/dev/ttyACM0 --baudrate=57600 --out=udp:192.168.2.1:14550
 
 USB Check:
 ls /dev/ttyACM*
+
+ros2 launch mavros apm.launch fcu_url:=/dev/pixhawk:57600
+
+
+MOVING MOTORS FROM WEBSITE:
+ros2 launch mavros apm.launch fcu_url:=/dev/pixhawk:57600
+
+ros2 run my_bot2 ros_to_pix_mavros
+
+python3 -m http.server 8000
+
+ros2 run rosbridge_server rosbridge_websocket
