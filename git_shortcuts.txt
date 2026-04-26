@@ -65,3 +65,13 @@ LIDAR pkg:
 abdullah@abdullah-desktop:~/ros2_ws$ ros2 launch sllidar_ros2 sllidar_a1_launch.py
 
 sudo chmod 666 /dev/ttyUSB0
+
+
+KILL ALL:
+pkill -f ros2 && sleep 2
+
+PIXHWAK FROM ETHERNET:
+mavproxy.py --master=/dev/ttyACM0 --baudrate=57600 --out=udp:192.168.2.1:14550
+
+USB Check:
+ls /dev/ttyACM*

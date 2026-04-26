@@ -41,8 +41,8 @@ class MasterBrake(Node):
             throttle = int(1500 - (linear_x * 300))
             steering = int(1500 - (angular_z * 300))
 
-            rc.channels[0] = max(1000, min(2000, steering))
-            rc.channels[2] = max(1000, min(2000, throttle))
+            rc.channels[1] = max(1000, min(2000, steering))
+            rc.channels[9] = max(1000, min(2000, throttle))
 
         self.rc_pub.publish(rc)
 
