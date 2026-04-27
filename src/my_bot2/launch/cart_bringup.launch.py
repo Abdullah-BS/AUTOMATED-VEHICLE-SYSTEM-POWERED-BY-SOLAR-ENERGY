@@ -117,21 +117,21 @@ def generate_launch_description():
         name='cmd_vel_to_rc',
         remappings=[('/cmd_vel', '/cmd_vel_safe')],
         parameters=[{
-            'wheelbase_m':          0.65,
-            'max_steer_rad':        0.5236,
-            'throttle_neutral_us':  1500,
-            'throttle_fwd_us':      1800,
-            'throttle_back_us':     1300,
-            'steer_center_us':      1500,
-            'steer_right_us':       1800,
-            'steer_left_us':        1300,
-            'max_speed_fwd':        1.5,
-            'max_speed_back':       0.7,
-            'cmd_timeout_sec':      0.5,
-            'publish_rate_hz':      20.0,
+            'throttle_neutral_us': 1500,
+            'throttle_fwd_us': 1200,
+            'throttle_back_us': 1800,
+            'steer_center_us': 1500,
+            'steer_right_us': 1800,
+            'steer_left_us': 1200,
+            'max_speed_fwd': 0.3,
+            'max_speed_back': 0.3,
+            'cmd_timeout_sec': 0.5,
+            'publish_rate_hz': 10.0,
         }],
         output='screen'
     )
+
+    cmd_vel_bridge_delayed = TimerAction(period=7.0, actions=[cmd_vel_bridge])
 
    
 
@@ -232,6 +232,7 @@ def generate_launch_description():
         tf_base_to_laser,
         tf_laser_to_camera,
         rf2o_delayed,
+        cmd_vel_bridge_delayed,
         ekf_delayed,
 #        camera_processor_node,
         master_brake_node,
