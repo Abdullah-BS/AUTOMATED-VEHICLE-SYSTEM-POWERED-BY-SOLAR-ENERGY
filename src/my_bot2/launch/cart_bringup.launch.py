@@ -81,7 +81,7 @@ def generate_launch_description():
         parameters=[{
             'laser_scan_topic': '/scan',
             'odom_topic': '/odom',
-            'publish_tf': True,
+            'publish_tf': False,
             'base_frame_id': 'base_link',
             'odom_frame_id': 'odom',
             'init_pose_from_topic': '',
@@ -213,6 +213,17 @@ def generate_launch_description():
             lifecycle_manager,
         ]
     )
+    ekf_node = Node(
+        package='robot_localization',
+        executable='ekf_node',
+        name='ekf_filter_node',
+        parameters=[os.path.join(pkg, 'config', 'ekf.yaml')],
+        output='screen'
+    )
+
+    ekf_delayed = TimerAction(period=7.0, actions=[ekf_node])
+
+
 
     return LaunchDescription([
         lidar_node,
@@ -221,6 +232,7 @@ def generate_launch_description():
         tf_base_to_laser,
         tf_laser_to_camera,
         rf2o_delayed,
+        ekf_delayed,
 #        camera_processor_node,
         master_brake_node,
         nav2_delayed,
