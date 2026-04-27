@@ -136,9 +136,9 @@ class CmdVelToRC(Node):
             throttle_us = self.throttle_mid + frac_v * (self.throttle_back - self.throttle_mid)
 
         if w > 0.2:
-            self._current_steer += self._steer_step
-        elif w < -0.2:
             self._current_steer -= self._steer_step
+        elif w < -0.2:
+            self._current_steer += self._steer_step
 
         lo_s = min(self.steer_left, self.steer_right)
         hi_s = max(self.steer_left, self.steer_right)

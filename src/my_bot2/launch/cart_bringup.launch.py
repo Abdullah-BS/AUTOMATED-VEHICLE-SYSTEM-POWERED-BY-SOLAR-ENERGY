@@ -18,7 +18,7 @@ def generate_launch_description():
         name='sllidar_a1',
         parameters=[{
             'channel_type': 'serial',
-            'serial_port': '/dev/ttyUSB0',
+            'serial_port': '/dev/ttyUSB1',
             'serial_baudrate': 115200,
             'frame_id': 'laser',
             'angle_compensate': True,
