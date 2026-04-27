@@ -29,8 +29,8 @@ class RosToPix(Node):
 
         # ── Parameters ──────────────────────────────────────────────────
         self.declare_parameter('throttle_neutral',   1500)
-        self.declare_parameter('throttle_fwd_max',   1800)
-        self.declare_parameter('throttle_rev_max',   1200)
+        self.declare_parameter('throttle_fwd_max',   1200)
+        self.declare_parameter('throttle_rev_max',   1800)
         self.declare_parameter('steer_center',       1500)
         self.declare_parameter('steer_left_max',     1200)
         self.declare_parameter('steer_right_max',    1800)
@@ -56,6 +56,8 @@ class RosToPix(Node):
         self._arm_attempts   = 0
         self._last_twist     = Twist()
         self._last_cmd_time  = self.get_clock().now()
+        self._current_steer = 1500   # starts centered
+        self._steer_step    = 40     # PWM units per tick (increase = faster steering)
 
         # ── Publisher ────────────────────────────────────────────────────
         self.rc_pub = self.create_publisher(OverrideRCIn, '/mavros/rc/override', 10)
@@ -128,54 +130,53 @@ class RosToPix(Node):
         if not self._armed:
             return
 
-        # Watchdog — if cmd_vel is stale → go neutral/stop
+        # Watchdog — if cmd_vel is stale → ONLY stop throttle, keep steer position
         age = (self.get_clock().now() - self._last_cmd_time).nanoseconds * 1e-9
         if age > self.cmd_timeout:
-            steer_us    = self.st_center
-            throttle_us = self.th_neutral
+            steer_us    = self._current_steer   # ← hold last position
+            throttle_us = self.th_neutral       # ← stop motor only
         else:
             steer_us, throttle_us = self._twist_to_pwm(self._last_twist)
-
+            
         rc = OverrideRCIn()
         rc.channels = [NO_OVERRIDE] * 18
-        rc.channels[0] = int(steer_us)       # CH1 = steering
-        rc.channels[2] = int(throttle_us)    # CH3 = throttle
-
+        rc.channels[0] = int(steer_us)
+        rc.channels[2] = int(throttle_us)
         self.rc_pub.publish(rc)
-
+    
         self.get_logger().info(
             f'CH1(steer)={int(steer_us)}  CH3(throttle)={int(throttle_us)}',
             throttle_duration_sec=0.3
         )
 
+
     # ── Twist → PWM conversion ────────────────────────────────────────────
 
     def _twist_to_pwm(self, twist: Twist):
         v = max(-self.max_v, min(self.max_v, twist.linear.x))
-        w = max(-self.max_w, min(self.max_w, twist.angular.z))
-
-        # Throttle: forward = higher PWM
+        w = twist.angular.z
+    
+        # Throttle: direct mapping (unchanged)
         if v >= 0:
             frac = v / self.max_v
             throttle = self.th_neutral + frac * (self.th_fwd - self.th_neutral)
         else:
             frac = -v / self.max_v
             throttle = self.th_neutral - frac * (self.th_neutral - self.th_rev)
-
-        # Steering: +angular.z = LEFT = lower PWM (1200)
-        #           -angular.z = RIGHT = higher PWM (1800)
-        frac_w = w / self.max_w
-        if frac_w >= 0:   # left
-            steer = self.st_center + frac_w * (self.st_left - self.st_center)
-        else:             # right
-            steer = self.st_center + (-frac_w) * (self.st_right - self.st_center)
-
+    
+        # Steering: increment/decrement while button held
+        if w > 0.2:        # Left held  → increase PWM
+            self._current_steer += self._steer_step
+        elif w < -0.2:     # Right held → decrease PWM
+            self._current_steer -= self._steer_step
+        # else: no input → hold current position
+    
+        self._current_steer = max(self.st_left, min(self.st_right, self._current_steer))
+    
         throttle = max(1000, min(2000, throttle))
-        steer    = max(1000, min(2000, steer))
-
-        return steer, throttle
-
-
+    
+        return int(self._current_steer), int(throttle)
+    
 # ── Entry point ───────────────────────────────────────────────────────────
 
 def main(args=None):

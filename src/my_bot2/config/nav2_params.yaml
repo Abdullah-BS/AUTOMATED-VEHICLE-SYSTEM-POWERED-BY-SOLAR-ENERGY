@@ -1,12 +1,12 @@
 amcl:
   ros__parameters:
-    use_sim_time: True
+    use_sim_time: False
     alpha1: 0.2
     alpha2: 0.2
     alpha3: 0.2
     alpha4: 0.2
     alpha5: 0.2
-    base_frame_id: "base_footprint"
+    base_frame_id: "base_link"
     beam_skip_distance: 0.5
     beam_skip_error_threshold: 0.9
     beam_skip_threshold: 0.3
@@ -41,9 +41,9 @@ amcl:
 
 bt_navigator:
   ros__parameters:
-    use_sim_time: True
+    use_sim_time: False
     global_frame: map
-    robot_base_frame: base_footprint
+    robot_base_frame: base_link
     odom_topic: /odom
     bt_loop_duration: 10
     default_server_timeout: 20
@@ -99,7 +99,7 @@ bt_navigator:
 
 controller_server:
   ros__parameters:
-    use_sim_time: True
+    use_sim_time: False
     controller_frequency: 15.0  # Increased for faster reaction at high speeds
     min_x_velocity_threshold: 0.001
     min_y_velocity_threshold: 0.5
@@ -163,9 +163,9 @@ controller_server:
 local_costmap:
   local_costmap:
     ros__parameters:
-      use_sim_time: True
+      use_sim_time: False
       global_frame: odom
-      robot_base_frame: base_footprint
+      robot_base_frame: base_link
       rolling_window: true
       width: 6                 # Increased to give 3m of forward visibility
       height: 6                # Increased to give 3m of forward visibility
@@ -202,8 +202,8 @@ global_costmap:
       update_frequency: 2.0
       publish_frequency: 1.0
       global_frame: map
-      robot_base_frame: base_footprint
-      use_sim_time: True
+      robot_base_frame: base_link
+      use_sim_time: False
       footprint: "[ [0.25, 0.15], [0.25, -0.15], [-0.25, -0.15], [-0.25, 0.15] ]"
       resolution: 0.05
       track_unknown_space: true
@@ -234,7 +234,7 @@ global_costmap:
 planner_server:
   ros__parameters:
     expected_planner_frequency: 5.0
-    use_sim_time: True
+    use_sim_time: False
     planner_plugins: ["GridBased"]
     GridBased:
       plugin: "nav2_navfn_planner/NavfnPlanner"
@@ -257,9 +257,9 @@ behavior_server:
     assisted_teleop:
       plugin: "nav2_behaviors/AssistedTeleop"
     global_frame: odom
-    robot_base_frame: base_footprint
+    robot_base_frame: base_link
     transform_tolerance: 0.1
-    use_sim_time: true
+    use_sim_time: False
     simulate_ahead_time: 2.0
     max_rotational_vel: 1.8
     min_rotational_vel: 0.4
@@ -267,7 +267,7 @@ behavior_server:
 
 velocity_smoother:
   ros__parameters:
-    use_sim_time: True
+    use_sim_time: False
     smoothing_frequency: 20.0
     scale_velocities: False
     feedback: "OPEN_LOOP"
@@ -279,6 +279,6 @@ velocity_smoother:
 
 map_server:
   ros__parameters:
-    use_sim_time: True
+    use_sim_time: False
     # CHANGE THIS to your actual path
-    yaml_filename: "/home/abdullah/ros2_ws/src/my_mapper/maps/campus_map.yaml"
+    yaml_filename: "/home/abdullah/ros2_ws/src/my_mapper/maps/Lab_map.yaml"

@@ -9,7 +9,7 @@ from ament_index_python.packages import get_package_share_directory
 def generate_launch_description():
 
     pkg = get_package_share_directory('my_bot2')
-    nav2_params = os.path.join(pkg, 'config', 'hardware_nav2_params.yaml')
+    nav2_params = os.path.join(pkg, 'config', 'nav2_params.yaml')
 
     # 1. Lidar
     lidar_node = Node(
@@ -38,22 +38,25 @@ def generate_launch_description():
             'gcs_url': '',
             'target_system_id': 1,
             'target_component_id': 1,
+            'time.timesync_rate': 0.0,
+            'time.system_time_rate': 1.0,
+            'time.timesync_mode': 'MAVLINK',
         }],
         output='screen'
     )
 
-    # 4. Camera
-    camera_node = Node(
-        package='v4l2_camera',
-        executable='v4l2_camera_node',
-        name='v4l2_camera_node',
-        parameters=[{
-            'video_device': '/dev/video0',
-            'image_size': [640, 480],
-            'camera_frame_id': 'camera',
-        }],
-        output='screen'
-    )
+#    # 4. Camera
+#    camera_node = Node(
+#        package='v4l2_camera',
+#        executable='v4l2_camera_node',
+#        name='v4l2_camera_node',
+#        parameters=[{
+#            'video_device': '/dev/video0',
+#            'image_size': [640, 480],
+#            'camera_frame_id': 'camera',
+#        }],
+#        output='screen'
+#    )
 
     # 5. Static TFs
     tf_base_to_laser = Node(
@@ -89,13 +92,13 @@ def generate_launch_description():
 
     rf2o_delayed = TimerAction(period=6.0, actions=[rf2o_node])
 
-    # 7. Camera Safety Node
-    camera_processor_node = Node(
-        package='my_bot2',
-        executable='camera_node',
-        name='camera_safety_node',
-        output='screen'
-    )
+#    # 7. Camera Safety Node
+#    camera_processor_node = Node(
+#        package='my_bot2',
+#        executable='camera_node',
+#        name='camera_safety_node',
+#        output='screen'
+#    )
 
     # 8. Master Brake
     master_brake_node = Node(
@@ -112,6 +115,7 @@ def generate_launch_description():
         package='my_bot2',
         executable='cmd_vel_to_rc',
         name='cmd_vel_to_rc',
+        remappings=[('/cmd_vel', '/cmd_vel_safe')],
         parameters=[{
             'wheelbase_m':          0.65,
             'max_steer_rad':        0.5236,
@@ -129,7 +133,7 @@ def generate_launch_description():
         output='screen'
     )
 
-    cmd_vel_bridge_delayed = TimerAction(period=7.0, actions=[cmd_vel_bridge])
+   
 
     # 9. Nav2 Stack — delayed 8s (after MAVROS + RF2O are settled)
     map_server = Node(
@@ -144,10 +148,9 @@ def generate_launch_description():
         package='nav2_amcl',
         executable='amcl',
         name='amcl',
-        parameters=[nav2_params, {'set_initial_pose': False}],
+        parameters=[nav2_params],
         output='screen'
     )
-
     planner_server = Node(
         package='nav2_planner',
         executable='planner_server',
@@ -214,12 +217,11 @@ def generate_launch_description():
     return LaunchDescription([
         lidar_node,
         mavros_node,           # ← THE FIX: was commented out before
-        camera_node,
+#        camera_node,
         tf_base_to_laser,
         tf_laser_to_camera,
         rf2o_delayed,
-        camera_processor_node,
+#        camera_processor_node,
         master_brake_node,
-        cmd_vel_bridge_delayed,
         nav2_delayed,
     ])
