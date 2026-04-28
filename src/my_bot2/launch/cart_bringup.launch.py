@@ -25,6 +25,7 @@ def generate_launch_description():
             'scan_mode': 'Standard',
             'inverted': False,
             'max_distance': 8.0,
+            'enable_angle_crop_func': True,
         }],
         output='screen'
     )
@@ -118,11 +119,11 @@ def generate_launch_description():
         remappings=[('/cmd_vel', '/cmd_vel_safe')],
         parameters=[{
             'throttle_neutral_us': 1500,
-            'throttle_fwd_us': 1200,
-            'throttle_back_us': 1800,
+            'throttle_fwd_us': 1600,
+            'throttle_back_us': 1400,
             'steer_center_us': 1500,
-            'steer_right_us': 1800,
-            'steer_left_us': 1200,
+            'steer_right_us': 2023,
+            'steer_left_us': 1300,
             'max_speed_fwd': 0.3,
             'max_speed_back': 0.3,
             'cmd_timeout_sec': 0.5,
