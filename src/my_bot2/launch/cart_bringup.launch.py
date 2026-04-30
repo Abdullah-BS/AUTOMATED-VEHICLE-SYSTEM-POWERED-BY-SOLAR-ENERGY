@@ -18,7 +18,7 @@ def generate_launch_description():
         name='sllidar_a1',
         parameters=[{
             'channel_type': 'serial',
-            'serial_port': '/dev/ttyUSB0',
+            'serial_port': '/dev/ttyUSB1',
             'serial_baudrate': 115200,
             'frame_id': 'laser',
             'angle_compensate': True,
@@ -46,6 +46,15 @@ def generate_launch_description():
         output='screen'
     )
 
+    
+        # 3. Arduino bridge
+    arduino_bridge_node = Node(
+        package='my_bot2',
+        executable='ArduinoBridge',
+        name='arduino_bridge',
+        output='screen',
+        emulate_tty=True
+    )
 #    # 4. Camera
 #    camera_node = Node(
 #        package='v4l2_camera',
@@ -228,6 +237,7 @@ def generate_launch_description():
 
     return LaunchDescription([
         lidar_node,
+        arduino_bridge_node,
         # mavros_node,           # ← THE FIX: was commented out before
 #        camera_node,
         tf_base_to_laser,

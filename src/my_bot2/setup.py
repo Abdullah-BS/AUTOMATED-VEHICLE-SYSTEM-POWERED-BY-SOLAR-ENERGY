@@ -21,7 +21,7 @@ setup(
         ('share/' + package_name + '/rviz', glob('rviz/*.rviz')),
         (os.path.join('share', package_name, 'behavior_trees'), glob('behavior_trees/*.xml')),
     ],
-    install_requires=['setuptools'],
+    install_requires=['setuptools','pyserial'],
     zip_safe=True,
     maintainer='ahmed',
     maintainer_email='AhmedAlharthy017@gmail.com',
@@ -42,6 +42,8 @@ setup(
             'scan_cleaner = my_bot2.scan_cleaner:main',
             'cmd_vel_to_rc = my_bot2.cmd_vel_to_rc:main',
             'ros_to_pix_mavros = my_bot2.ros_to_pix_mavros:main',
+            'ArduinoBridge = my_bot2.ArduinoBridge:main',
+
 
 
         ],
