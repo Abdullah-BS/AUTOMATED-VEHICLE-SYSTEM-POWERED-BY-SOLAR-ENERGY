@@ -87,3 +87,9 @@ ros2 run my_bot2 ros_to_pix_mavros
 python3 -m http.server 8000
 
 ros2 run rosbridge_server rosbridge_websocket
+
+
+
+
+usbipd bind --busid 3-1 --auto-attach
+usbipd bind --busid 3-4 --auto-attach
