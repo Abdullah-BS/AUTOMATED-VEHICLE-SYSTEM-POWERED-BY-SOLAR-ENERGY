@@ -18,7 +18,7 @@ def generate_launch_description():
         name='sllidar_a1',
         parameters=[{
             'channel_type': 'serial',
-            'serial_port': '/dev/ttyUSB1',
+            'serial_port': '/dev/ttyUSB0',
             'serial_baudrate': 115200,
             'frame_id': 'laser',
             'angle_compensate': True,
@@ -82,7 +82,7 @@ def generate_launch_description():
         parameters=[{
             'laser_scan_topic': '/scan',
             'odom_topic': '/odom',
-            'publish_tf': False,
+            'publish_tf': True,
             'base_frame_id': 'base_link',
             'odom_frame_id': 'odom',
             'init_pose_from_topic': '',
@@ -228,14 +228,14 @@ def generate_launch_description():
 
     return LaunchDescription([
         lidar_node,
-        mavros_node,           # ← THE FIX: was commented out before
+        # mavros_node,           # ← THE FIX: was commented out before
 #        camera_node,
         tf_base_to_laser,
         tf_laser_to_camera,
         rf2o_delayed,
-        cmd_vel_bridge_delayed,
-        ekf_delayed,
+        # cmd_vel_bridge_delayed,
+        # ekf_delayed,
 #        camera_processor_node,
-        master_brake_node,
+        # master_brake_node,
         nav2_delayed,
     ])
