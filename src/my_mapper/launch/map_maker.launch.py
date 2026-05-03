@@ -19,7 +19,7 @@ def generate_launch_description():
             executable='sllidar_node',
             name='sllidar_node',
             parameters=[{
-                'serial_port': '/dev/ttyUSB0',
+                'serial_port': '/dev/ttyUSB1',
                 'serial_baudrate': 115200,
                 'frame_id': 'laser',
                 'angle_compensate': True,
@@ -69,6 +69,7 @@ def generate_launch_description():
             package='rviz2',
             executable='rviz2',
             name='rviz2',
+            additional_env={'LIBGL_ALWAYS_SOFTWARE': '1'},
             output='screen'
         ),
     ])

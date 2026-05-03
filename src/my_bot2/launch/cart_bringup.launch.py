@@ -1,6 +1,6 @@
 import os
 from launch import LaunchDescription
-from launch.actions import TimerAction, DeclareLaunchArgument
+from launch.actions import TimerAction, DeclareLaunchArgument, ExecuteProcess
 from launch.substitutions import LaunchConfiguration
 from launch_ros.actions import Node
 from ament_index_python.packages import get_package_share_directory
@@ -9,7 +9,7 @@ from ament_index_python.packages import get_package_share_directory
 def generate_launch_description():
 
     pkg = get_package_share_directory('my_bot2')
-    nav2_params = os.path.join(pkg, 'config', 'nav2_params.yaml')
+    nav2_params = os.path.join(pkg, 'config', 'nav2_params_Ackermann.yaml')
 
     # 1. Lidar
     lidar_node = Node(
@@ -55,19 +55,13 @@ def generate_launch_description():
         output='screen',
         emulate_tty=True
     )
-#    # 4. Camera
-#    camera_node = Node(
-#        package='v4l2_camera',
-#        executable='v4l2_camera_node',
-#        name='v4l2_camera_node',
-#        parameters=[{
-#            'video_device': '/dev/video0',
-#            'image_size': [640, 480],
-#            'camera_frame_id': 'camera',
-#        }],
-#        output='screen'
-#    )
-
+   # 4. Camera
+    camera_node = Node(
+        package='my_bot2',
+        executable='camera_node',
+        name='camera_node',
+        output='screen'
+    )
     # 5. Static TFs
     tf_base_to_laser = Node(
         package='tf2_ros',
@@ -223,23 +217,49 @@ def generate_launch_description():
             lifecycle_manager,
         ]
     )
-    ekf_node = Node(
-        package='robot_localization',
-        executable='ekf_node',
-        name='ekf_filter_node',
-        parameters=[os.path.join(pkg, 'config', 'ekf.yaml')],
+    # ── rosbridge — bridges ROS2 topics/actions to the website via WebSocket ──
+    rosbridge_node = Node(
+        package='rosbridge_server',
+        executable='rosbridge_websocket',
+        name='rosbridge_websocket',
+        parameters=[{'port': 9090}],
+        output='screen'
+    )
+    # Delayed 5s so ROS2 graph is ready before the browser connects
+    rosbridge_delayed = TimerAction(period=5.0, actions=[rosbridge_node])
+
+    # ── HTTP server — serves web_manual.html to your phone/laptop ──
+    # Points to the repo root where web_manual.html lives
+    web_server = ExecuteProcess(
+        cmd=['python3', '-m', 'http.server', '8080', '--directory', "/ros2_ws/AUTOMATED-VEHICLE-SYSTEM-POWERED-BY-SOLAR-ENERGY"],
+        output='screen'
+    )
+    
+        
+    rviz_config = os.path.join(
+        get_package_share_directory('my_bot2'),
+        'rviz',
+        'nav2_custom.rviz'
+    )
+
+    rvizLaunch = Node(
+        package='rviz2',
+        executable='rviz2',
+        name='rviz2',
+        arguments=['-d', rviz_config],
+        additional_env={'LIBGL_ALWAYS_SOFTWARE': '1'},
         output='screen'
     )
 
-    ekf_delayed = TimerAction(period=7.0, actions=[ekf_node])
-
-
 
     return LaunchDescription([
+        # rosbridge_delayed,
+        # web_server,
         lidar_node,
         arduino_bridge_node,
+    
         # mavros_node,           # ← THE FIX: was commented out before
-#        camera_node,
+       camera_node,
         tf_base_to_laser,
         tf_laser_to_camera,
         rf2o_delayed,
@@ -248,4 +268,5 @@ def generate_launch_description():
 #        camera_processor_node,
         # master_brake_node,
         nav2_delayed,
+        rvizLaunch,
     ])

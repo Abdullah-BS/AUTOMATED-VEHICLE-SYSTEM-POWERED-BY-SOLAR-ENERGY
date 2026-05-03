@@ -1,83 +1,106 @@
 import rclpy
 from rclpy.node import Node
 from sensor_msgs.msg import Image
-from std_msgs.msg import Bool
+from std_msgs.msg import String, Bool
 from cv_bridge import CvBridge
 import cv2
+import json
 from ultralytics import YOLO
+from rclpy.qos import QoSProfile, ReliabilityPolicy, DurabilityPolicy
 
-# --- THE FIX: The correct ROS 2 Python import for Sensor QoS ---
-from rclpy.qos import qos_profile_sensor_data
 
-class CameraSafetyNode(Node):
+class CameraYoloNode(Node):
     def __init__(self):
-        super().__init__('camera_safety_node')
-        
-        # Using the stable PyTorch model
-        self.model = YOLO('yolov8n.pt').to('cpu')        
-        self.target_classes = [0, 15, 16] # Person, Cat, Dog
+        super().__init__('camera_yolo_node')
         self.bridge = CvBridge()
-        
-        self.frame_count = 0
-        self.process_every_n_frames = 2 # Process every 2nd frame
-        
-        # Subscribe using qos_profile_sensor_data (Notice: no parentheses!)
-        self.subscription = self.create_subscription(
-            Image, '/image_raw', self.listener_callback, qos_profile_sensor_data)
-        
-        # Publisher for the Master Brake (Standard QoS is fine here, it's just a boolean)
+        self.model = YOLO('yolov8n.pt')
+
+        qos = QoSProfile(
+            depth=10,
+            reliability=ReliabilityPolicy.BEST_EFFORT,
+            durability=DurabilityPolicy.VOLATILE
+        )
+
+        self.image_pub = self.create_publisher(Image, '/camera/image_raw', qos)
+        self.detection_pub = self.create_publisher(String, '/yolo/detections', 10)
         self.stop_pub = self.create_publisher(Bool, '/camera_stop_signal', 10)
-        
-        # Publish the annotated image using qos_profile_sensor_data
-        self.annotated_pub = self.create_publisher(Image, '/image_annotated', qos_profile_sensor_data)
 
-    def listener_callback(self, msg):
+        self.cap = cv2.VideoCapture(2, cv2.CAP_V4L2)
+        self.cap.set(cv2.CAP_PROP_FOURCC, cv2.VideoWriter_fourcc('M', 'J', 'P', 'G'))
+        self.cap.set(cv2.CAP_PROP_FRAME_WIDTH, 640)
+        self.cap.set(cv2.CAP_PROP_FRAME_HEIGHT, 480)
+        self.cap.set(cv2.CAP_PROP_FPS, 30)
+
+        # Human detection settings
+        self.confidence_threshold = 0.1   # min confidence to count as human
+        self.frame_count = 0
+        self.last_annotated = None
+        self.human_was_detected = False
+
+        self.timer = self.create_timer(1 / 30, self.timer_callback)
+        self.get_logger().info('Camera YOLO node started')
+
+    def timer_callback(self):
+        ret, frame = self.cap.read()
+        if not ret:
+            self.get_logger().warn('Failed to grab frame')
+            return
+
         self.frame_count += 1
-        if self.frame_count % self.process_every_n_frames != 0:
-            return 
 
-        frame = self.bridge.imgmsg_to_cv2(msg, desired_encoding='bgr8')
-        
-        # Run the fast model at 320p resolution
-        results = self.model(frame, stream=True, verbose=False, conf=0.6, classes=self.target_classes, imgsz=320)
-        
-        found_alive = False
-        annotated_frame = frame.copy()
+        # Run YOLO every 2nd frame to save CPU
+        if self.frame_count % 2 == 0:
+            results = self.model(frame, verbose=False)
+            annotated = results[0].plot()
+            self.last_annotated = annotated
 
-        for r in results:
-            annotated_frame = r.plot()
-            if len(r.boxes) > 0:
-                found_alive = True
+            # Build detections list + check for humans
+            detections = []
+            human_found = False
 
-        # Publish Stop Signal
-        stop_msg = Bool()
-        stop_msg.data = found_alive
-        self.stop_pub.publish(stop_msg)
+            for box in results[0].boxes:
+                class_name = self.model.names[int(box.cls)]
+                confidence = float(box.conf)
+                detections.append({
+                    'class': class_name,
+                    'confidence': confidence,
+                    'bbox': box.xyxy[0].tolist()
+                })
+                if class_name == 'person' and confidence >= self.confidence_threshold:
+                    human_found = True
 
-        # Publish Annotated Image
-        annotated_msg = self.bridge.cv2_to_imgmsg(annotated_frame, encoding="bgr8")
-        annotated_msg.header = msg.header  
-        self.annotated_pub.publish(annotated_msg)
+            # Publish detections JSON
+            self.detection_pub.publish(String(data=json.dumps(detections)))
 
-        if found_alive:
-            self.get_logger().warn("Camera: Alive Being Detected!", throttle_duration_sec=1.0)
+            # Publish stop signal
+            self.stop_pub.publish(Bool(data=human_found))
+
+            # Log only on state change (avoid spam)
+            if human_found and not self.human_was_detected:
+                self.get_logger().warn('🚨 HUMAN DETECTED — Stop signal sent!')
+            elif not human_found and self.human_was_detected:
+                self.get_logger().info('✅ Human cleared — Stop signal released.')
+
+            self.human_was_detected = human_found
+
+        else:
+            # Use last annotated frame on skipped frames
+            annotated = self.last_annotated if self.last_annotated is not None else frame
+
+        # Always publish image every frame for smooth video
+        img_msg = self.bridge.cv2_to_imgmsg(annotated, encoding='bgr8')
+        img_msg.header.stamp = self.get_clock().now().to_msg()
+        img_msg.header.frame_id = 'camera'
+        self.image_pub.publish(img_msg)
+
+    def destroy_node(self):
+        self.cap.release()
+        super().destroy_node()
+
 
 def main(args=None):
     rclpy.init(args=args)
-    node = CameraSafetyNode()
-    
-    try:
-        rclpy.spin(node)
-    except KeyboardInterrupt:
-        pass
-    finally:
-        node.destroy_node()
-        try:
-            if rclpy.ok():
-                rclpy.shutdown()
-        except Exception:
-            # Silently catch any double-shutdown errors
-            pass
-
-if __name__ == '__main__':
-    main()
+    node = CameraYoloNode()
+    rclpy.spin(node)
+    node.destroy_node()
+    rclpy.shutdown()

@@ -90,6 +90,19 @@ ros2 run rosbridge_server rosbridge_websocket
 
 
 
+#LIDAR ARUDION WINDOWS
 
-usbipd bind --busid 3-1 --auto-attach
-usbipd bind --busid 3-4 --auto-attach
+usbipd list
+
+# change port numbers based on list
+usbipd bind --busid 4-2
+
+usbipd attach --wsl --busid 4-2
+
+
+Ubuntue
+ls /dev/ttyUSB*
+ls /dev/ttyACM*
+dmesg | tail
+
+
