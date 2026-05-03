@@ -1,0 +1,699 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>KAU Autonomous Shuttle</title>
+    <script src="https://cdn.jsdelivr.net/npm/eventemitter2@6/lib/eventemitter2.min.js"></script>
+    <script src="js/roslib.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/easeljs@1/lib/easeljs.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/ros2d@0/build/ros2d.min.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg:#0d0d0d; --surface:#1a1a1a; --surface-2:#222; --surface-hover:#2a2a2a;
+            --border:rgba(255,255,255,0.08); --border-strong:rgba(255,255,255,0.14);
+            --text:#f0f0f0; --text-muted:#888; --text-faint:#555;
+            --green:#00a651; --green-dim:rgba(0,166,81,0.12); --green-hover:#00c060;
+            --red:#e53935; --red-dim:rgba(229,57,53,0.15); --red-hover:#ff5252;
+            --amber:#f59e0b; --amber-dim:rgba(245,158,11,0.12);
+            --sidebar-w:220px; --header-h:58px; --telem-h:64px; --footer-h:70px;
+            --r-sm:6px; --r-md:10px; --r-lg:14px;
+            --tr:180ms cubic-bezier(0.16,1,0.3,1);
+            --font:'Inter','Segoe UI',system-ui,sans-serif;
+        }
+        *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+        html{-webkit-font-smoothing:antialiased;text-size-adjust:none}
+        body{background:var(--bg);color:var(--text);font-family:var(--font);font-size:15px;height:100dvh;overflow:hidden;display:flex;flex-direction:column}
+        button{cursor:pointer;border:none;background:none;color:inherit;font:inherit}
+        button:focus-visible{outline:2px solid var(--green);outline-offset:2px;border-radius:var(--r-sm)}
+
+        /* HEADER */
+        header{height:var(--header-h);background:var(--surface);border-bottom:1px solid var(--border-strong);display:flex;align-items:center;justify-content:space-between;padding:0 20px;flex-shrink:0;z-index:10}
+        .brand{display:flex;align-items:center;gap:10px}
+        .brand-logo{width:32px;height:32px;flex-shrink:0}
+        .brand h1{font-size:16px;font-weight:700;letter-spacing:.5px}
+        .brand h1 span{color:var(--green)}
+        .conn-pill{display:flex;align-items:center;gap:8px;background:rgba(255,255,255,.05);border:1px solid var(--border);border-radius:99px;padding:6px 14px;font-size:13px;color:var(--text-muted)}
+        #status-dot{width:9px;height:9px;border-radius:50%;background:#555;flex-shrink:0}
+        #status-dot.connected{background:var(--green);animation:pdot 1.5s infinite}
+        #status-dot.error{background:var(--red)}
+        @keyframes pdot{0%{box-shadow:0 0 0 0 rgba(0,166,81,.6)}70%{box-shadow:0 0 0 8px rgba(0,166,81,0)}100%{box-shadow:0 0 0 0 rgba(0,166,81,0)}}
+
+        /* TELEMETRY */
+        .telem-bar{height:var(--telem-h);background:var(--surface);border-bottom:1px solid var(--border);display:flex;flex-shrink:0}
+        .tel{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;border-right:1px solid var(--border);gap:3px}
+        .tel:last-child{border-right:none}
+        .tel-label{font-size:10px;color:var(--text-faint);text-transform:uppercase;letter-spacing:1px}
+        .tel-value{font-size:18px;font-weight:700;color:var(--green);line-height:1}
+        .tel-value.neutral{color:var(--text);font-size:13px;font-weight:600}
+        .tel-unit{font-size:11px;color:var(--text-muted);font-weight:400}
+
+        /* SHELL */
+        .app-shell{flex:1;display:flex;flex-direction:column;overflow:hidden;position:relative}
+        .sidebar{display:none}
+        #app-content{flex:1;position:relative;overflow:hidden}
+
+        /* MOBILE FOOTER */
+        footer{height:var(--footer-h);background:var(--surface);border-top:1px solid var(--border-strong);display:flex;align-items:center;gap:6px;padding:6px 10px;flex-shrink:0}
+        .tab-btn{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;padding:8px 4px;border-radius:var(--r-md);font-size:11px;font-weight:600;color:var(--text-muted);transition:color var(--tr),background var(--tr)}
+        .tab-btn i{font-size:18px}
+        .tab-btn.active{color:var(--green);background:var(--green-dim)}
+        .tab-btn:active{opacity:.7}
+        .btn-estop{flex:1.4;height:50px;background:var(--red);color:#fff;font-size:13px;font-weight:700;letter-spacing:.5px;border-radius:var(--r-md);display:flex;align-items:center;justify-content:center;gap:6px;transition:background var(--tr),transform var(--tr)}
+        .btn-estop:active{background:var(--red-hover);transform:scale(.96)}
+        .btn-estop i{font-size:16px}
+
+        /* DESKTOP */
+        @media(min-width:768px){
+            .app-shell{flex-direction:row}
+            footer{display:none}
+            .sidebar{width:var(--sidebar-w);background:var(--surface);border-right:1px solid var(--border-strong);display:flex;flex-direction:column;padding:16px 12px;gap:4px;flex-shrink:0}
+            .sidebar-label{font-size:10px;font-weight:600;letter-spacing:1.5px;color:var(--text-faint);text-transform:uppercase;padding:4px 8px 8px}
+            .sidebar .tab-btn{flex:none;width:100%;flex-direction:row;justify-content:flex-start;gap:12px;padding:11px 14px;font-size:14px;border-radius:var(--r-md)}
+            .sidebar .tab-btn i{font-size:17px;width:18px;text-align:center}
+            .sidebar .tab-btn.active{color:var(--green);background:var(--green-dim)}
+            .sidebar .tab-btn:hover:not(.active){background:rgba(255,255,255,.04);color:var(--text)}
+            .sidebar-spacer{flex:1}
+            .sidebar .btn-estop{width:100%;height:46px;border-radius:var(--r-md);font-size:14px;margin-top:8px}
+            #app-content{flex:1}
+        }
+
+        /* PAGES */
+        .page-view{position:absolute;inset:0;padding:20px;display:none;flex-direction:column;gap:16px;overflow-y:auto}
+        .page-view.active{display:flex}
+        @media(min-width:768px){.page-view{padding:28px 32px}}
+        .page-title{font-size:20px;font-weight:700;color:var(--text);margin-bottom:4px}
+        .page-sub{font-size:13px;color:var(--text-muted)}
+
+        /* NAVIGATE PAGE */
+        .nav-banner{display:none;align-items:center;gap:10px;background:var(--green-dim);border:1px solid rgba(0,166,81,.3);border-radius:var(--r-md);padding:12px 16px;font-size:14px;font-weight:500;color:var(--green)}
+        .nav-banner.visible{display:flex}
+        .spinner{width:16px;height:16px;border:2px solid rgba(0,166,81,.3);border-top-color:var(--green);border-radius:50%;animation:spin .8s linear infinite;flex-shrink:0}
+        @keyframes spin{to{transform:rotate(360deg)}}
+        .cancel-nav{margin-left:auto;background:rgba(229,57,53,.15);color:var(--red);border:1px solid rgba(229,57,53,.3);border-radius:var(--r-sm);padding:5px 12px;font-size:12px;font-weight:600;cursor:pointer;transition:background var(--tr)}
+        .cancel-nav:hover{background:rgba(229,57,53,.3)}
+        .destination-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:12px}
+        @media(min-width:768px){.destination-grid{grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:16px}}
+        .dest-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--r-lg);padding:20px 12px;display:flex;flex-direction:column;align-items:center;gap:10px;cursor:pointer;transition:background var(--tr),border-color var(--tr),transform var(--tr);user-select:none;-webkit-tap-highlight-color:transparent}
+        .dest-card:hover{background:var(--surface-hover);border-color:var(--border-strong);transform:translateY(-2px)}
+        .dest-card:active{transform:scale(.96)}
+        .dest-card.active{border-color:var(--green);background:var(--green-dim)}
+        .dest-card.active .dest-icon{color:var(--green)}
+        .dest-icon{font-size:26px;color:var(--text-muted);transition:color var(--tr)}
+        .dest-name{font-size:13px;font-weight:600;text-align:center;color:var(--text)}
+        .dest-coords{font-size:10px;color:var(--text-faint);font-family:monospace;margin-top:-4px}
+
+        /* MAP PAGE */
+        #page-map{padding-bottom:0}
+        .map-toolbar{display:flex;align-items:center;gap:10px;flex-shrink:0}
+        .map-tool-btn{display:flex;align-items:center;gap:8px;background:var(--surface);border:1px solid var(--border);border-radius:var(--r-md);padding:8px 16px;font-size:13px;font-weight:600;color:var(--text-muted);transition:all var(--tr)}
+        .map-tool-btn:hover{background:var(--surface-hover);border-color:var(--border-strong);color:var(--text)}
+        .map-tool-btn.active{background:var(--green-dim);border-color:rgba(0,166,81,.5);color:var(--green)}
+        .map-hint{font-size:12px;color:var(--text-faint);margin-left:4px}
+        #map-container{flex:1;min-height:260px;background:#1a1f1a;border-radius:var(--r-lg);border:1px solid var(--border);display:flex;justify-content:center;align-items:center;overflow:hidden;position:relative;touch-action:none}
+        #map-container canvas{width:100% !important;height:100% !important;object-fit:contain}
+        #map-loading-text{color:var(--text-faint);font-size:14px}
+        /* goal preview popup */
+        #goal-popup{position:absolute;bottom:14px;left:50%;transform:translateX(-50%);background:rgba(26,26,26,.95);border:1px solid rgba(0,166,81,.4);border-radius:var(--r-lg);padding:12px 18px;display:none;flex-direction:column;gap:8px;z-index:20;min-width:240px;backdrop-filter:blur(8px)}
+        #goal-popup.visible{display:flex}
+        .gp-label{font-size:11px;color:var(--text-faint);text-transform:uppercase;letter-spacing:1px}
+        .gp-coords{font-size:14px;font-weight:600;font-family:monospace;color:var(--green)}
+        .gp-yaw{font-size:13px;color:var(--text-muted)}
+        .gp-actions{display:flex;gap:8px;margin-top:4px}
+        .gp-actions button{flex:1;padding:8px;border-radius:var(--r-sm);font-size:13px;font-weight:600;transition:background var(--tr)}
+        .gp-confirm{background:var(--green);color:#fff}
+        .gp-confirm:hover{background:var(--green-hover)}
+        .gp-cancel{background:var(--surface-2);color:var(--text-muted);border:1px solid var(--border)}
+        .gp-cancel:hover{background:var(--surface-hover)}
+        /* cursor in goal mode */
+        #map-container.goal-mode{cursor:crosshair}
+
+        /* DIAGNOSTICS */
+        .diag-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--r-lg);overflow:hidden}
+        .diag-item{display:flex;align-items:center;justify-content:space-between;padding:15px 18px;border-bottom:1px solid var(--border)}
+        .diag-item:last-child{border-bottom:none}
+        .diag-item-left{display:flex;flex-direction:column;gap:2px}
+        .diag-item-name{font-size:14px;font-weight:500}
+        .diag-item-desc{font-size:12px;color:var(--text-faint)}
+        .badge{display:inline-flex;align-items:center;gap:5px;padding:4px 10px;border-radius:99px;font-size:12px;font-weight:600}
+        .badge-good{background:rgba(0,166,81,.12);color:#00c060}
+        .badge-warn{background:rgba(245,158,11,.12);color:var(--amber)}
+        .badge-error{background:rgba(229,57,53,.12);color:#ff5252}
+
+        /* MANUAL */
+        #page-manual{justify-content:center;align-items:center}
+        .camera-alert{background:var(--red-dim);border:1px solid rgba(229,57,53,.4);border-radius:var(--r-md);padding:10px 16px;font-size:13px;font-weight:600;color:var(--red);display:none;align-items:center;gap:8px;width:100%;max-width:310px}
+        .camera-alert.visible{display:flex}
+        .manual-label{font-size:11px;font-weight:600;color:var(--text-faint);text-transform:uppercase;letter-spacing:2px}
+        .dpad{display:grid;grid-template-columns:repeat(3,88px);grid-template-rows:repeat(3,88px);gap:8px;margin:16px 0}
+        @media(min-width:768px){.dpad{grid-template-columns:repeat(3,96px);grid-template-rows:repeat(3,96px)}}
+        .dpad-btn{background:var(--surface);border:1px solid var(--border-strong);border-radius:var(--r-lg);color:var(--text);font-size:24px;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:background var(--tr),border-color var(--tr),transform var(--tr);user-select:none;-webkit-user-select:none;touch-action:none}
+        .dpad-btn:active,.dpad-btn.pressed{background:var(--green);border-color:var(--green);transform:scale(.93);color:#fff}
+        .dpad-btn.stop-btn{font-size:13px;font-weight:700;letter-spacing:.5px;color:var(--text-muted)}
+        .dpad-btn.stop-btn:active,.dpad-btn.stop-btn.pressed{background:var(--red);border-color:var(--red);color:#fff}
+        .speed-control{background:var(--surface);border:1px solid var(--border);border-radius:var(--r-lg);padding:14px 20px;width:280px;display:flex;flex-direction:column;gap:10px}
+        .speed-header{display:flex;justify-content:space-between;align-items:center;font-size:12px;color:var(--text-muted)}
+        .speed-header span:last-child{font-size:15px;font-weight:700;color:var(--green)}
+        input[type=range]{width:100%;accent-color:var(--green);cursor:pointer;height:4px}
+
+        /* TOAST */
+        #toast{position:fixed;bottom:calc(var(--footer-h) + 12px);left:50%;transform:translateX(-50%) translateY(10px);background:var(--surface-2);border:1px solid var(--border-strong);border-radius:var(--r-md);padding:10px 18px;font-size:13px;font-weight:500;white-space:nowrap;opacity:0;pointer-events:none;transition:opacity .2s,transform .2s;z-index:100}
+        #toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+        #toast.toast-success{border-color:rgba(0,166,81,.4);color:#00c060}
+        #toast.toast-warn{border-color:rgba(245,158,11,.4);color:var(--amber)}
+        #toast.toast-error{border-color:rgba(229,57,53,.4);color:var(--red)}
+        @media(min-width:768px){#toast{bottom:24px}}
+    </style>
+</head>
+<body>
+
+<!-- HEADER -->
+<header>
+    <div class="brand">
+        <svg class="brand-logo" viewBox="0 0 32 32" fill="none">
+            <rect width="32" height="32" rx="8" fill="#00a651" fill-opacity=".12"/>
+            <path d="M6 19L10 12H22L26 19Z" stroke="#00a651" stroke-width="1.5" fill="none" stroke-linejoin="round"/>
+            <circle cx="10.5" cy="20.5" r="2" fill="#00a651"/>
+            <circle cx="21.5" cy="20.5" r="2" fill="#00a651"/>
+            <path d="M6 19H26" stroke="#00a651" stroke-width="1.5"/>
+            <path d="M14 12V8H18" stroke="#00a651" stroke-width="1.2" stroke-linecap="round"/>
+            <circle cx="18" cy="7" r="1.5" fill="#00a651"/>
+        </svg>
+        <h1>KAU <span>SHUTTLE</span></h1>
+    </div>
+    <div class="conn-pill">
+        <div id="status-dot"></div>
+        <span id="status-text">Connecting…</span>
+    </div>
+</header>
+
+<!-- TELEMETRY -->
+<div class="telem-bar">
+    <div class="tel"><span class="tel-label">Speed</span><span class="tel-value" id="tel-speed">0.0 <span class="tel-unit">m/s</span></span></div>
+    <div class="tel"><span class="tel-label">Battery</span><span class="tel-value">78 <span class="tel-unit">%</span></span></div>
+    <div class="tel"><span class="tel-label">Mode</span><span class="tel-value neutral" id="tel-mode">Standby</span></div>
+    <div class="tel"><span class="tel-label">Target</span><span class="tel-value neutral" id="tel-target">—</span></div>
+</div>
+
+<!-- APP SHELL -->
+<div class="app-shell">
+    <!-- Desktop Sidebar -->
+    <nav class="sidebar">
+        <div class="sidebar-label">Navigation</div>
+        <button class="tab-btn active" id="sb-nav" onclick="switchTab('nav',this)"><i class="fas fa-map-marker-alt"></i>Navigate</button>
+        <button class="tab-btn" id="sb-manual" onclick="switchTab('manual',this)"><i class="fas fa-gamepad"></i>Manual Drive</button>
+        <button class="tab-btn" id="sb-map" onclick="switchTab('map',this);initMap();"><i class="fas fa-map"></i>Live Map</button>
+        <button class="tab-btn" id="sb-diag" onclick="switchTab('diag',this)"><i class="fas fa-stethoscope"></i>Diagnostics</button>
+        <div class="sidebar-spacer"></div>
+        <button class="btn-estop" onclick="emergencyStop()"><i class="fas fa-stop-circle"></i>E-STOP</button>
+    </nav>
+
+    <div id="app-content">
+
+        <!-- NAVIGATE PAGE -->
+        <div id="page-nav" class="page-view active">
+            <div><div class="page-title">Select Destination</div><div class="page-sub">Nav2 navigates the cart to the chosen map point</div></div>
+            <div class="nav-banner" id="nav-banner">
+                <div class="spinner"></div>
+                <span id="nav-banner-text">Navigating…</span>
+                <button class="cancel-nav" onclick="cancelNavigation()">Cancel</button>
+            </div>
+            <div class="destination-grid" id="dest-grid"></div>
+        </div>
+
+        <!-- MAP PAGE -->
+        <div id="page-map" class="page-view">
+            <div><div class="page-title">Live Navigation Map</div><div class="page-sub">Click &amp; drag on the map to send a custom Nav2 goal</div></div>
+
+            <!-- toolbar -->
+            <div class="map-toolbar">
+                <button class="map-tool-btn" id="goal-mode-btn" onclick="toggleGoalMode()">
+                    <i class="fas fa-crosshairs"></i><span>Set Goal</span>
+                </button>
+                <span class="map-hint" id="map-hint">Activate to click the map and set a destination</span>
+            </div>
+
+            <!-- map canvas area -->
+            <div id="map-container">
+                <p id="map-loading-text">Waiting for map data…</p>
+                <!-- goal confirmation popup (inside container so it overlays map) -->
+                <div id="goal-popup" onmousedown="event.stopPropagation()" onmouseup="event.stopPropagation()" ontouchstart="event.stopPropagation()" ontouchend="event.stopPropagation()">
+                    <div class="gp-label">Custom Goal</div>
+                    <div class="gp-coords" id="gp-coords">x: 0.00 &nbsp; y: 0.00</div>
+                    <div class="gp-yaw" id="gp-yaw">Heading: 0.0°</div>
+                    <div class="gp-actions">
+                        <button class="gp-confirm" onclick="confirmMapGoal()"><i class="fas fa-location-arrow"></i> Navigate Here</button>
+                        <button class="gp-cancel" onclick="dismissGoalPopup()">Cancel</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- DIAGNOSTICS PAGE -->
+        <div id="page-diag" class="page-view">
+            <div><div class="page-title">System Diagnostics</div><div class="page-sub">Live subsystem health</div></div>
+            <div class="diag-card">
+                <div class="diag-item"><div class="diag-item-left"><span class="diag-item-name">SLLidar A1M8</span><span class="diag-item-desc">/scan · RPLIDAR driver</span></div><span class="badge badge-good"><i class="fas fa-check-circle"></i> Running</span></div>
+                <div class="diag-item"><div class="diag-item-left"><span class="diag-item-name">Odometry (RF2O)</span><span class="diag-item-desc">/odom · laser odometry</span></div><span class="badge badge-good"><i class="fas fa-check-circle"></i> Good</span></div>
+                <div class="diag-item"><div class="diag-item-left"><span class="diag-item-name">MAVROS / Pixhawk</span><span class="diag-item-desc">/mavros · APM Rover</span></div><span class="badge badge-good"><i class="fas fa-check-circle"></i> Connected</span></div>
+                <div class="diag-item"><div class="diag-item-left"><span class="diag-item-name">Camera Safety</span><span class="diag-item-desc">/camera_stop_signal</span></div><span class="badge badge-good" id="diag-camera"><i class="fas fa-check-circle"></i> Clear</span></div>
+                <div class="diag-item"><div class="diag-item-left"><span class="diag-item-name">Nav2 Stack</span><span class="diag-item-desc">/navigate_to_pose action</span></div><span class="badge badge-good" id="diag-nav2"><i class="fas fa-check-circle"></i> Ready</span></div>
+                <div class="diag-item"><div class="diag-item-left"><span class="diag-item-name">rosbridge</span><span class="diag-item-desc">ws://192.168.2.2:9090</span></div><span class="badge" id="diag-ros"><i class="fas fa-circle-notch fa-spin"></i> …</span></div>
+            </div>
+        </div>
+
+        <!-- MANUAL PAGE -->
+        <div id="page-manual" class="page-view">
+            <div class="manual-label">Manual Drive</div>
+            <div class="camera-alert" id="camera-alert"><i class="fas fa-exclamation-triangle"></i>CAMERA STOP — Person / Animal Detected</div>
+            <div class="dpad">
+                <div></div>
+                <button class="dpad-btn" onmousedown="startMove(1,0)" onmouseup="stopMove()" onmouseleave="stopMove()" ontouchstart="startMove(1,0)" ontouchend="stopMove()"><i class="fas fa-arrow-up"></i></button>
+                <div></div>
+                <button class="dpad-btn" onmousedown="startMove(0,-1)" onmouseup="stopMove()" onmouseleave="stopMove()" ontouchstart="startMove(0,-1)" ontouchend="stopMove()"><i class="fas fa-arrow-left"></i></button>
+                <button class="dpad-btn stop-btn" onclick="stopMove()">STOP</button>
+                <button class="dpad-btn" onmousedown="startMove(0,1)" onmouseup="stopMove()" onmouseleave="stopMove()" ontouchstart="startMove(0,1)" ontouchend="stopMove()"><i class="fas fa-arrow-right"></i></button>
+                <div></div>
+                <button class="dpad-btn" onmousedown="startMove(-1,0)" onmouseup="stopMove()" onmouseleave="stopMove()" ontouchstart="startMove(-1,0)" ontouchend="stopMove()"><i class="fas fa-arrow-down"></i></button>
+                <div></div>
+            </div>
+            <div class="speed-control">
+                <div class="speed-header"><span><i class="fas fa-tachometer-alt"></i>&nbsp;Speed</span><span id="speed-val">0.35 m/s</span></div>
+                <input type="range" id="speed-slider" min="0.1" max="0.8" step="0.05" value="0.35" oninput="updateSpeed(this.value)">
+            </div>
+        </div>
+
+    </div><!-- /#app-content -->
+</div><!-- /.app-shell -->
+
+<!-- Mobile Footer -->
+<footer>
+    <button class="tab-btn active" id="tab-nav" onclick="switchTab('nav',this)"><i class="fas fa-map-marker-alt"></i>Navigate</button>
+    <button class="tab-btn" id="tab-manual" onclick="switchTab('manual',this)"><i class="fas fa-gamepad"></i>Manual</button>
+    <button class="btn-estop" onclick="emergencyStop()"><i class="fas fa-stop-circle"></i>E-STOP</button>
+    <button class="tab-btn" id="tab-map" onclick="switchTab('map',this);initMap();"><i class="fas fa-map"></i>Map</button>
+    <button class="tab-btn" id="tab-diag" onclick="switchTab('diag',this)"><i class="fas fa-stethoscope"></i>Status</button>
+</footer>
+
+<div id="toast" role="status" aria-live="polite"></div>
+
+<script>
+// =============================================================
+// CONFIG — update before deploying
+// =============================================================
+var JETSON_IP = '192.168.137.1';
+
+// Preset destinations — fill in your real map coordinates
+// How to get them: ros2 topic echo /goal_pose --once  (after clicking Nav2 Goal in RViz2)
+var DESTINATIONS = [
+    { id:'engineering', name:'Engineering',       icon:'fa-university',       x: 1.50, y:-0.50, yaw: 0.0  },
+    { id:'cafeteria',   name:'Cafeteria',          icon:'fa-coffee',           x: 3.00, y: 1.20, yaw: 1.57 },
+    { id:'library',     name:'Library',            icon:'fa-book',             x:-1.00, y: 2.50, yaw: 3.14 },
+    { id:'mosque',      name:'Mosque',             icon:'fa-mosque',           x: 0.00, y:-2.00, yaw:-1.57 },
+    { id:'charging',    name:'Charging Station',   icon:'fa-charging-station', x: 0.00, y: 0.00, yaw: 0.0  }
+];
+
+// =============================================================
+// BUILD DESTINATION CARDS
+// =============================================================
+DESTINATIONS.forEach(function(d) {
+    var c = document.createElement('div');
+    c.className = 'dest-card'; c.id = 'dest-'+d.id;
+    c.setAttribute('role','button'); c.setAttribute('tabindex','0');
+    c.innerHTML = '<i class="fas '+d.icon+' dest-icon"></i>'
+                + '<span class="dest-name">'+d.name+'</span>'
+                + '<span class="dest-coords">x:'+d.x.toFixed(2)+' y:'+d.y.toFixed(2)+'</span>';
+    c.addEventListener('click', function(){ navigateTo(d); });
+    c.addEventListener('keydown', function(e){ if(e.key==='Enter'||e.key===' ') navigateTo(d); });
+    document.getElementById('dest-grid').appendChild(c);
+});
+
+// =============================================================
+// ROS CONNECTION
+// =============================================================
+var ros = new ROSLIB.Ros({ url:'ws://'+JETSON_IP+':9090' });
+var statusDot  = document.getElementById('status-dot');
+var statusText = document.getElementById('status-text');
+var diagRos    = document.getElementById('diag-ros');
+
+ros.on('connection', function(){
+    statusText.textContent='Connected'; statusDot.className='connected';
+    diagRos.className='badge badge-good'; diagRos.innerHTML='<i class="fas fa-check-circle"></i> Connected';
+});
+ros.on('error', function(){
+    statusText.textContent='Error'; statusDot.className='error';
+    diagRos.className='badge badge-error'; diagRos.innerHTML='<i class="fas fa-times-circle"></i> Error';
+});
+ros.on('close', function(){
+    statusText.textContent='Disconnected'; statusDot.className='';
+    diagRos.className='badge badge-warn'; diagRos.innerHTML='<i class="fas fa-exclamation-circle"></i> Closed';
+});
+
+// =============================================================
+// PUBLISHERS
+// =============================================================
+var cmdVelTopic = new ROSLIB.Topic({ 
+    ros: ros, 
+    name: '/cmd_vel', 
+    messageType: 'geometry_msgs/msg/Twist',
+    latch: false,
+    queue_size: 1
+});
+var uiTopic     = new ROSLIB.Topic({ ros:ros, name:'/web_commands', messageType:'std_msgs/String' });
+
+// =============================================================
+// NAV2 ACTION CLIENT
+// =============================================================
+var navClient = new ROSLIB.ActionClient({ ros:ros, serverName:'/navigate_to_pose', actionName:'nav2_msgs/action/NavigateToPose' });
+var currentGoal = null;
+
+function yawToQuat(yaw){ return { x:0, y:0, z:Math.sin(yaw/2), w:Math.cos(yaw/2) }; }
+
+function sendNav2Goal(label, x, y, yaw) {
+    if(window.navigator&&window.navigator.vibrate) window.navigator.vibrate(30);
+    if(currentGoal){ currentGoal.cancel(); }
+    document.getElementById('tel-target').textContent = label;
+    document.getElementById('tel-mode').textContent   = 'Auto-Nav';
+    document.getElementById('nav-banner-text').textContent = 'Navigating to '+label+'…';
+    document.getElementById('nav-banner').classList.add('visible');
+    showToast('Goal sent → '+label,'success');
+    uiTopic.publish(new ROSLIB.Message({data:label}));
+    currentGoal = new ROSLIB.Goal({
+        actionClient: navClient,
+        goalMessage: { pose:{ header:{frame_id:'map'}, pose:{ position:{x:x,y:y,z:0}, orientation:yawToQuat(yaw) } } }
+    });
+    currentGoal.on('result', function(){
+        currentGoal=null;
+        document.getElementById('nav-banner').classList.remove('visible');
+        document.querySelectorAll('.dest-card').forEach(function(c){c.classList.remove('active');});
+        document.getElementById('tel-target').textContent='Arrived';
+        document.getElementById('tel-mode').textContent='Standby';
+        showToast('Arrived at '+label+' ✓','success');
+        if(window.navigator&&window.navigator.vibrate) window.navigator.vibrate([80,40,80]);
+    });
+    currentGoal.send();
+}
+
+function navigateTo(dest) {
+    document.querySelectorAll('.dest-card').forEach(function(c){c.classList.remove('active');});
+    document.getElementById('dest-'+dest.id).classList.add('active');
+    sendNav2Goal(dest.name, dest.x, dest.y, dest.yaw);
+}
+
+function cancelNavigation() {
+    if(currentGoal){ currentGoal.cancel(); currentGoal=null; }
+    document.getElementById('nav-banner').classList.remove('visible');
+    document.querySelectorAll('.dest-card').forEach(function(c){c.classList.remove('active');});
+    document.getElementById('tel-target').textContent='—';
+    document.getElementById('tel-mode').textContent='Standby';
+    uiTopic.publish(new ROSLIB.Message({data:'CANCEL'}));
+    showToast('Navigation cancelled','warn');
+}
+
+// =============================================================
+// CAMERA STOP SUBSCRIBER
+// =============================================================
+var cameraAlert = document.getElementById('camera-alert');
+var diagCamera  = document.getElementById('diag-camera');
+var cameraSub = new ROSLIB.Topic({ros:ros,name:'/camera_stop_signal',messageType:'std_msgs/Bool'});
+cameraSub.subscribe(function(msg){
+    if(msg.data){
+        cameraAlert.classList.add('visible');
+        diagCamera.className='badge badge-warn'; diagCamera.innerHTML='<i class="fas fa-exclamation-circle"></i> Person Detected';
+    } else {
+        cameraAlert.classList.remove('visible');
+        diagCamera.className='badge badge-good'; diagCamera.innerHTML='<i class="fas fa-check-circle"></i> Clear';
+    }
+});
+
+// =============================================================
+// MANUAL DRIVE
+// =============================================================
+var driveSpeed=0.35, moveInterval=null;
+function updateSpeed(v){ driveSpeed=parseFloat(v); document.getElementById('speed-val').textContent=driveSpeed.toFixed(2)+' m/s'; }
+function publishTwist(lin,ang){ cmdVelTopic.publish(new ROSLIB.Message({linear:{x:lin,y:0,z:0},angular:{x:0,y:0,z:ang}})); }
+function startMove(linDir,angDir){
+    var lin=linDir!==0?(linDir>0?driveSpeed:-driveSpeed*0.8):0;
+    var ang=angDir!==0?(angDir>0?0.5:-0.5):0;
+    if(moveInterval) clearInterval(moveInterval);
+    publishTwist(lin,ang);
+    moveInterval=setInterval(function(){ publishTwist(lin,ang); },100);
+}
+function stopMove(){ if(moveInterval){clearInterval(moveInterval);moveInterval=null;} publishTwist(0,0); }
+function emergencyStop(){
+    stopMove(); cancelNavigation();
+    uiTopic.publish(new ROSLIB.Message({data:'EMERGENCY STOP'}));
+    if(window.navigator&&window.navigator.vibrate) window.navigator.vibrate([150,50,150]);
+    showToast('EMERGENCY STOP sent','error');
+}
+
+// =============================================================
+// TAB SWITCHING
+// =============================================================
+function switchTab(id, btn){
+    document.querySelectorAll('.page-view').forEach(function(p){p.classList.remove('active');});
+    document.getElementById('page-'+id).classList.add('active');
+    document.querySelectorAll('.tab-btn').forEach(function(b){b.classList.remove('active');});
+    var m=document.getElementById('tab-'+id), s=document.getElementById('sb-'+id);
+    if(m) m.classList.add('active');
+    if(s) s.classList.add('active');
+}
+
+// =============================================================
+// LIVE MAP + CLICK-TO-SET-GOAL
+// =============================================================
+var viewer, gridClient, robotMarker, pathShape;
+var goalPinShape, goalArrowShape;
+var goalMode   = false;
+var isDragging = false;
+var dragStartCanvas = null;   // {x,y} in canvas pixels
+var pendingGoal     = null;   // {x,y,yaw} in map frame — awaiting confirmation
+
+function initMap(){
+    if(viewer) return;
+    document.getElementById('map-loading-text').style.display='none';
+    viewer = new ROS2D.Viewer({ divID:'map-container', width:900, height:900, background:'#1a1f1a' });
+
+    gridClient = new ROS2D.OccupancyGridClient({ ros:ros, rootObject:viewer.scene, continuous:true, topic:'/map' });
+    gridClient.on('change',function(){
+        viewer.scaleToDimensions(gridClient.currentGrid.width, gridClient.currentGrid.height);
+        viewer.shift(gridClient.currentGrid.pose.position.x, gridClient.currentGrid.pose.position.y);
+    });
+
+    // Robot marker
+    robotMarker = new createjs.Shape();
+    robotMarker.graphics.beginFill('#00a651').moveTo(-5,-3.5).lineTo(7,0).lineTo(-5,3.5).closePath().endFill();
+    robotMarker.scaleX=robotMarker.scaleY=0.5; robotMarker.visible=false;
+    viewer.scene.addChild(robotMarker);
+
+    // Goal pin (circle)
+    goalPinShape = new createjs.Shape();
+    viewer.scene.addChild(goalPinShape);
+
+    // Goal arrow (direction indicator)
+    goalArrowShape = new createjs.Shape();
+    viewer.scene.addChild(goalArrowShape);
+
+    // Path shape
+    pathShape = new createjs.Shape();
+    viewer.scene.addChild(pathShape);
+
+    // AMCL pose
+    var poseSub = new ROSLIB.Topic({ros:ros,name:'/amcl_pose',messageType:'geometry_msgs/PoseWithCovarianceStamped'});
+    poseSub.subscribe(function(msg){
+        var p=msg.pose.pose;
+        robotMarker.x=p.position.x; robotMarker.y=-p.position.y;
+        var q=p.orientation;
+        robotMarker.rotation=-Math.atan2(2*(q.w*q.z+q.x*q.y),1-2*(q.y*q.y+q.z*q.z))*(180/Math.PI);
+        robotMarker.visible=true;
+    });
+
+    // Planned path
+    var pathSub = new ROSLIB.Topic({ros:ros,name:'/plan',messageType:'nav_msgs/Path'});
+    pathSub.subscribe(function(msg){
+        pathShape.graphics.clear();
+        if(msg.poses.length>0){
+            pathShape.graphics.setStrokeStyle(0.08).beginStroke('rgba(0,200,80,.7)');
+            var s=msg.poses[0].pose.position;
+            pathShape.graphics.moveTo(s.x,-s.y);
+            for(var i=1;i<msg.poses.length;i++){ var pt=msg.poses[i].pose.position; pathShape.graphics.lineTo(pt.x,-pt.y); }
+            pathShape.graphics.endStroke();
+        }
+    });
+
+    // Attach pointer events for goal-setting
+    attachMapEvents();
+}
+
+// ── Coordinate conversion: CSS pixels on map-container → ROS map frame ──
+function cssToMap(cssX, cssY){
+    var canvas = viewer.scene.canvas;
+    // CSS size vs internal canvas resolution
+    var rect = canvas.getBoundingClientRect();
+    var rx = canvas.width  / rect.width;
+    var ry = canvas.height / rect.height;
+    var cx = cssX * rx;
+    var cy = cssY * ry;
+    var mx =  (cx - viewer.scene.x) / viewer.scene.scaleX;
+    var my = -(cy - viewer.scene.y) / viewer.scene.scaleY;
+    return { x: mx, y: my };
+}
+
+function drawGoalPin(mapX, mapY, yaw, dragging){
+    goalPinShape.graphics.clear();
+    // outer ring
+    goalPinShape.graphics.setStrokeStyle(0.08).beginStroke(dragging?'#fff':'rgba(255,255,255,.6)').beginFill('rgba(0,166,81,.85)').drawCircle(mapX,-mapY,0.25).endFill();
+    goalArrowShape.graphics.clear();
+    if(yaw !== null){
+        var len=0.7, aw=0.12;
+        var ex=mapX+len*Math.cos(yaw), ey=-mapY-len*Math.sin(yaw);
+        goalArrowShape.graphics.setStrokeStyle(0.1).beginStroke('#00ff80').moveTo(mapX,-mapY).lineTo(ex,ey).endStroke();
+        // arrowhead
+        var hx=ex-0.15*Math.cos(yaw), hy=ey+0.15*Math.sin(yaw);
+        goalArrowShape.graphics.beginFill('#00ff80')
+            .moveTo(ex,ey)
+            .lineTo(hx+aw*Math.sin(yaw), hy+aw*Math.cos(yaw))
+            .lineTo(hx-aw*Math.sin(yaw), hy-aw*Math.cos(yaw))
+            .closePath().endFill();
+    }
+    viewer.scene.update();
+}
+
+function clearGoalShapes(){
+    goalPinShape.graphics.clear();
+    goalArrowShape.graphics.clear();
+    viewer.scene.update();
+}
+
+function attachMapEvents(){
+    var el = document.getElementById('map-container');
+
+    // ── MOUSE ──
+    el.addEventListener('mousedown', function(e){
+        if(!goalMode||!viewer) return;
+        e.preventDefault();
+        var rect=el.getBoundingClientRect();
+        dragStartCanvas={ x:e.clientX-rect.left, y:e.clientY-rect.top };
+        isDragging=true;
+        var mp=cssToMap(dragStartCanvas.x, dragStartCanvas.y);
+        drawGoalPin(mp.x, mp.y, null, true);
+    });
+
+    el.addEventListener('mousemove', function(e){
+        if(!isDragging||!goalMode) return;
+        var rect=el.getBoundingClientRect();
+        var cx=e.clientX-rect.left, cy=e.clientY-rect.top;
+        var mp=cssToMap(dragStartCanvas.x, dragStartCanvas.y);
+        var dx=cx-dragStartCanvas.x, dy=cy-dragStartCanvas.y;
+        if(Math.sqrt(dx*dx+dy*dy)>8){
+            var yaw=Math.atan2(-dy,dx);
+            drawGoalPin(mp.x,mp.y,yaw,true);
+        }
+    });
+
+    el.addEventListener('mouseup', function(e){
+        if(!isDragging||!goalMode) return;
+        isDragging=false;
+        var rect=el.getBoundingClientRect();
+        var cx=e.clientX-rect.left, cy=e.clientY-rect.top;
+        var mp=cssToMap(dragStartCanvas.x, dragStartCanvas.y);
+        var dx=cx-dragStartCanvas.x, dy=cy-dragStartCanvas.y;
+        var yaw=(Math.sqrt(dx*dx+dy*dy)>8) ? Math.atan2(-dy,dx) : 0;
+        showGoalPopup(mp.x, mp.y, yaw);
+    });
+
+    // ── TOUCH ──
+    el.addEventListener('touchstart', function(e){
+        if(!goalMode||!viewer) return;
+        e.preventDefault();
+        var t=e.touches[0], rect=el.getBoundingClientRect();
+        dragStartCanvas={ x:t.clientX-rect.left, y:t.clientY-rect.top };
+        isDragging=true;
+        var mp=cssToMap(dragStartCanvas.x, dragStartCanvas.y);
+        drawGoalPin(mp.x,mp.y,null,true);
+    },{passive:false});
+
+    el.addEventListener('touchmove', function(e){
+        if(!isDragging||!goalMode) return;
+        e.preventDefault();
+        var t=e.touches[0], rect=el.getBoundingClientRect();
+        var cx=t.clientX-rect.left, cy=t.clientY-rect.top;
+        var mp=cssToMap(dragStartCanvas.x, dragStartCanvas.y);
+        var dx=cx-dragStartCanvas.x, dy=cy-dragStartCanvas.y;
+        if(Math.sqrt(dx*dx+dy*dy)>8){
+            drawGoalPin(mp.x,mp.y,Math.atan2(-dy,dx),true);
+        }
+    },{passive:false});
+
+    el.addEventListener('touchend', function(e){
+        if(!isDragging||!goalMode) return;
+        isDragging=false;
+        var t=e.changedTouches[0], rect=el.getBoundingClientRect();
+        var cx=t.clientX-rect.left, cy=t.clientY-rect.top;
+        var mp=cssToMap(dragStartCanvas.x, dragStartCanvas.y);
+        var dx=cx-dragStartCanvas.x, dy=cy-dragStartCanvas.y;
+        var yaw=(Math.sqrt(dx*dx+dy*dy)>8) ? Math.atan2(-dy,dx) : 0;
+        showGoalPopup(mp.x, mp.y, yaw);
+    });
+}
+
+function showGoalPopup(mapX, mapY, yaw){
+    pendingGoal={x:mapX, y:mapY, yaw:yaw};
+    drawGoalPin(mapX, mapY, yaw, false);
+    document.getElementById('gp-coords').textContent='x: '+mapX.toFixed(3)+'   y: '+mapY.toFixed(3);
+    document.getElementById('gp-yaw').textContent='Heading: '+(yaw*(180/Math.PI)).toFixed(1)+'°';
+    document.getElementById('goal-popup').classList.add('visible');
+}
+
+function confirmMapGoal(){
+    if(!pendingGoal) return;
+    // Capture into local var BEFORE dismissGoalPopup() so nothing can overwrite it
+    var pg = { x: pendingGoal.x, y: pendingGoal.y, yaw: pendingGoal.yaw };
+    pendingGoal = null;
+    document.getElementById('goal-popup').classList.remove('visible');
+    document.querySelectorAll('.dest-card').forEach(function(c){c.classList.remove('active');});
+    var label = 'Map Goal (' + pg.x.toFixed(2) + ', ' + pg.y.toFixed(2) + ')';
+    sendNav2Goal(label, pg.x, pg.y, pg.yaw);
+}
+
+function dismissGoalPopup(){
+    document.getElementById('goal-popup').classList.remove('visible');
+    if(!currentGoal) clearGoalShapes();
+}
+
+function toggleGoalMode(){
+    goalMode=!goalMode;
+    var btn=document.getElementById('goal-mode-btn');
+    var hint=document.getElementById('map-hint');
+    var mapEl=document.getElementById('map-container');
+    if(goalMode){
+        btn.classList.add('active');
+        btn.innerHTML='<i class="fas fa-crosshairs"></i><span>Goal Mode ON</span>';
+        hint.textContent='Press & drag on the map → release to confirm heading';
+        mapEl.classList.add('goal-mode');
+        showToast('Goal mode active — tap the map','success');
+    } else {
+        btn.classList.remove('active');
+        btn.innerHTML='<i class="fas fa-crosshairs"></i><span>Set Goal</span>';
+        hint.textContent='Activate to click the map and set a destination';
+        mapEl.classList.remove('goal-mode');
+        dismissGoalPopup();
+        isDragging=false;
+    }
+}
+
+// =============================================================
+// TOAST
+// =============================================================
+var toastTimer=null;
+function showToast(msg,type){
+    var el=document.getElementById('toast');
+    el.textContent=msg; el.className='show toast-'+(type||'success');
+    if(toastTimer) clearTimeout(toastTimer);
+    toastTimer=setTimeout(function(){ el.className=''; },3000);
+}
+</script>
+</body>
+</html>

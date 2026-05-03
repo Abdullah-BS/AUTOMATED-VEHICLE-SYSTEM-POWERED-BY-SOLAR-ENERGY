@@ -106,3 +106,7 @@ ls /dev/ttyACM*
 dmesg | tail
 
 
+FOR LIDAR AND arduino
+sudo udevadm control --reload-rules && sudo udevadm trigger
+ls -la /dev/lidar /dev/arduino
+

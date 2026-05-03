@@ -18,7 +18,7 @@ def generate_launch_description():
         name='sllidar_a1',
         parameters=[{
             'channel_type': 'serial',
-            'serial_port': '/dev/ttyUSB1',
+            'serial_port': '/dev/lidar',   # LIDAR always
             'serial_baudrate': 115200,
             'frame_id': 'laser',
             'angle_compensate': True,
@@ -231,35 +231,35 @@ def generate_launch_description():
     # ── HTTP server — serves web_manual.html to your phone/laptop ──
     # Points to the repo root where web_manual.html lives
     web_server = ExecuteProcess(
-        cmd=['python3', '-m', 'http.server', '8080', '--directory', "/ros2_ws/AUTOMATED-VEHICLE-SYSTEM-POWERED-BY-SOLAR-ENERGY"],
+        cmd=['python3', '-m', 'http.server', '8080', '--directory', "/home/ahmed/ros2_ws"],
         output='screen'
     )
     
         
-    rviz_config = os.path.join(
-        get_package_share_directory('my_bot2'),
-        'rviz',
-        'nav2_custom.rviz'
-    )
+    # rviz_config = os.path.join(
+    #     get_package_share_directory('my_bot2'),
+    #     'rviz',
+    #     'nav2_custom.rviz'
+    # )
 
-    rvizLaunch = Node(
-        package='rviz2',
-        executable='rviz2',
-        name='rviz2',
-        arguments=['-d', rviz_config],
-        additional_env={'LIBGL_ALWAYS_SOFTWARE': '1'},
-        output='screen'
-    )
+    # rvizLaunch = Node(
+    #     package='rviz2',
+    #     executable='rviz2',
+    #     name='rviz2',
+    #     arguments=['-d', rviz_config],
+    #     additional_env={'LIBGL_ALWAYS_SOFTWARE': '1'},
+    #     output='screen'
+    # )
 
 
     return LaunchDescription([
-        # rosbridge_delayed,
-        # web_server,
+        rosbridge_delayed,
+        web_server,
         lidar_node,
         arduino_bridge_node,
     
         # mavros_node,           # ← THE FIX: was commented out before
-       camera_node,
+        camera_node,
         tf_base_to_laser,
         tf_laser_to_camera,
         rf2o_delayed,
@@ -268,5 +268,5 @@ def generate_launch_description():
 #        camera_processor_node,
         # master_brake_node,
         nav2_delayed,
-        rvizLaunch,
+        # rvizLaunch,
     ])

@@ -13,12 +13,12 @@ class ArduinoBridge(Node):
         super().__init__('arduino_bridge')
 
         # --- CONFIGURATION ---
-        self.serial_port = '/dev/ttyUSB0'
+        self.serial_port = '/dev/arduino'          # Arduino always
         self.baud_rate = 115200
 
         self.WHEELBASE = 0.8
         self.MAX_SPEED = 2.0
-        self.MAX_ANGLE = 0.523
+        self.MAX_ANGLE = 1.0
 
         self.STEER_MIN = 1300
         self.STEER_MAX = 2000
