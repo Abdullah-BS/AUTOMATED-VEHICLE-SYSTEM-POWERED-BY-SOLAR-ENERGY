@@ -4,7 +4,6 @@ from rclpy.node import Node
 from geometry_msgs.msg import Twist
 from std_msgs.msg import Bool
 import serial
-import math
 import time
 
 
@@ -13,16 +12,21 @@ class ArduinoBridge(Node):
         super().__init__('arduino_bridge')
 
         # --- CONFIGURATION ---
-        self.serial_port = '/dev/arduino'          # Arduino always
+        self.serial_port = '/dev/arduino'
         self.baud_rate = 115200
 
-        self.WHEELBASE = 0.8
-        self.MAX_SPEED = 2.0
-        self.MAX_ANGLE = 1.0
+        # Speed config
+        self.MAX_SPEED = 1.0
+        self.MAX_THROTTLE = 254
 
-        self.STEER_MIN = 1300
-        self.STEER_MAX = 2000
-        self.STEER_CENTER = int((self.STEER_MIN + self.STEER_MAX) / 2)
+        # Full servo PWM range
+        self.STEER_MIN = 1200
+        self.STEER_MAX = 2200
+        self.STEER_CENTER = 1700
+
+        # Nav2 angular velocity scaling (rad/s -> full steering)
+        # Match this to your Nav2 / velocity_smoother max theta velocity
+        self.MAX_NAV2_ANGULAR_Z = 2.0
 
         # --- HUMAN DETECTION FLAG ---
         self.person_detected = False
@@ -32,6 +36,11 @@ class ArduinoBridge(Node):
             self.arduino = serial.Serial(self.serial_port, self.baud_rate, timeout=1)
             time.sleep(2)
             self.get_logger().info(f"Connected to Arduino on {self.serial_port}")
+
+            self._send_stop()
+            time.sleep(0.3)
+            self.get_logger().info(f"Initialized steering to center: {self.STEER_CENTER}")
+
         except Exception as e:
             self.get_logger().error(f"Failed to connect: {e}")
             raise SystemExit
@@ -50,14 +59,14 @@ class ArduinoBridge(Node):
             self._send_stop()
         elif not msg.data and self.person_detected:
             self.get_logger().info('✅ Human cleared — Resuming normal control.')
+
         self.person_detected = msg.data
 
     # ------------------------------------------------------------------
-    def map_value(self, x, in_min, in_max, out_min, out_max):
-        return (x - in_min) * (out_max - out_min) / (in_max - in_min) + out_min
+    def _clamp(self, value, low, high):
+        return max(low, min(value, high))
 
     def _send_stop(self):
-        """Send zero throttle + centered steering to Arduino immediately."""
         stop_cmd = f"0,{self.STEER_CENTER}\n"
         self.arduino.write(stop_cmd.encode('utf-8'))
 
@@ -65,7 +74,6 @@ class ArduinoBridge(Node):
     def cmd_vel_callback(self, msg):
         self.last_cmd_time = time.time()
 
-        # Block movement if human is detected
         if self.person_detected:
             self._send_stop()
             return
@@ -73,32 +81,46 @@ class ArduinoBridge(Node):
         linear_x = msg.linear.x
         angular_z = msg.angular.z
 
-        # THROTTLE (-255 to 255)
-        v = max(min(linear_x, self.MAX_SPEED), -self.MAX_SPEED)
-        throttle_val = int((v / self.MAX_SPEED) * 255)
+        # THROTTLE (-254 to 254)
+        v = self._clamp(linear_x, -self.MAX_SPEED, self.MAX_SPEED)
+        throttle_val = int((v / self.MAX_SPEED) * self.MAX_THROTTLE)
+        throttle_val = self._clamp(throttle_val, -self.MAX_THROTTLE, self.MAX_THROTTLE)
 
-        # STEERING (1300 to 2000)
-        if v == 0 and angular_z != 0:
-            delta = self.MAX_ANGLE if angular_z > 0 else -self.MAX_ANGLE
-        elif v == 0 and angular_z == 0:
-            delta = 0.0
+        # NAV2 angular velocity -> normalized steering command [-1, 1]
+        steer_norm = angular_z / self.MAX_NAV2_ANGULAR_Z
+        steer_norm = self._clamp(steer_norm, -1.0, 1.0)
+
+        # Map full normalized range to full servo PWM range
+        if steer_norm > 0.0:
+            steering_pwm = int(
+                self.STEER_CENTER - steer_norm * (self.STEER_CENTER - self.STEER_MIN)
+            )
+        elif steer_norm < 0.0:
+            steering_pwm = int(
+                self.STEER_CENTER + abs(steer_norm) * (self.STEER_MAX - self.STEER_CENTER)
+            )
         else:
-            delta = math.atan((self.WHEELBASE * angular_z) / v)
+            steering_pwm = self.STEER_CENTER
 
-        delta = max(min(delta, self.MAX_ANGLE), -self.MAX_ANGLE)
-        steering_pwm = int(self.map_value(
-            delta, -self.MAX_ANGLE, self.MAX_ANGLE,
-            self.STEER_MAX, self.STEER_MIN
-        ))
+        steering_pwm = self._clamp(steering_pwm, self.STEER_MIN, self.STEER_MAX)
 
         command = f"{throttle_val},{steering_pwm}\n"
         self.arduino.write(command.encode('utf-8'))
 
+        self.get_logger().info(
+            f"cmd_vel: v={linear_x:.2f}, w={angular_z:.2f}, "
+            f"throttle={throttle_val}, steer_norm={steer_norm:.2f}, steer_pwm={steering_pwm}"
+        )
+
     # ------------------------------------------------------------------
     def failsafe_check(self):
-        """Stop if Nav2 goes silent OR human is detected."""
         if self.person_detected or (time.time() - self.last_cmd_time > 0.5):
             self._send_stop()
+
+    # ------------------------------------------------------------------
+    def destroy_node(self):
+        self._send_stop()
+        super().destroy_node()
 
 
 def main(args=None):
@@ -109,7 +131,7 @@ def main(args=None):
     except KeyboardInterrupt:
         pass
     finally:
-        node._send_stop()        # ← fixed: was node.ser.close() (bug in original)
+        node._send_stop()
         node.arduino.close()
         node.destroy_node()
         rclpy.try_shutdown()

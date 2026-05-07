@@ -19,33 +19,28 @@ class CameraYoloNode(Node):
         self.detection_pub = self.create_publisher(String, '/yolo/detections', 10)
         self.stop_pub = self.create_publisher(Bool, '/camera_stop_signal', 10)
 
-        # Skip 0,1 (laptop camera) — start from index 2 (USB cameras)
-        self.cap = None
-        for index in [0,2, 3, 4, 5, 6]:
-            for codec in ['MJPG', 'H264', 'YUYV']:
-                cap = cv2.VideoCapture(index, cv2.CAP_V4L2)
-                cap.set(cv2.CAP_PROP_FOURCC, cv2.VideoWriter_fourcc(*codec))
-                cap.set(cv2.CAP_PROP_FRAME_WIDTH, 640)
-                cap.set(cv2.CAP_PROP_FRAME_HEIGHT, 480)
-                cap.set(cv2.CAP_PROP_FPS, 30)
-                if not cap.isOpened():
-                    cap.release()
-                    continue
-                # Warm-up: discard first frames (camera needs time to start)
-                for _ in range(10):
-                    cap.read()
-                ret, frame = cap.read()
-                if ret and frame is not None and frame.mean() > 5.0:
-                    self.cap = cap
-                    self.get_logger().info(f'✅ Camera opened: /dev/video{index} | codec: {codec}')
-                    break
-                cap.release()
-            if self.cap is not None:
-                break
+        # Open the known working camera directly
+        self.cap = cv2.VideoCapture(1)
 
-        if self.cap is None:
-            self.get_logger().error('❌ No working camera found!')
+        if not self.cap.isOpened():
+            self.get_logger().error('❌ Failed to open /dev/video1')
             raise SystemExit
+
+        self.cap.set(cv2.CAP_PROP_FRAME_WIDTH, 640)
+        self.cap.set(cv2.CAP_PROP_FRAME_HEIGHT, 480)
+        self.cap.set(cv2.CAP_PROP_FPS, 30)
+
+        # Warm-up and verify frame read
+        self.get_logger().info('Opening /dev/video1...')
+        for _ in range(10):
+            self.cap.read()
+
+        ret, frame = self.cap.read()
+        if not ret or frame is None:
+            self.get_logger().error('❌ Camera opened but failed to read from /dev/video1')
+            raise SystemExit
+
+        self.get_logger().info('✅ Camera opened: /dev/video1')
 
         # Full warm-up after selection
         self.get_logger().info('Warming up camera...')
@@ -55,7 +50,7 @@ class CameraYoloNode(Node):
 
         # Detection settings
         self.confidence_threshold = 0.5
-        self.cooldown_sec = 5.0
+        self.cooldown_sec = 2.0
 
         # State machine: 'moving' | 'stopped' | 'checking'
         self.state = 'moving'
@@ -69,8 +64,8 @@ class CameraYoloNode(Node):
     # ------------------------------------------------------------------
     def timer_callback(self):
         ret, frame = self.cap.read()
-        if not ret:
-            self.get_logger().warn('Failed to grab frame')
+        if not ret or frame is None:
+            self.get_logger().warn('Failed to grab frame from /dev/video1')
             return
 
         self.frame_count += 1
@@ -91,6 +86,7 @@ class CameraYoloNode(Node):
                     'confidence': confidence,
                     'bbox': box.xyxy[0].tolist()
                 })
+
                 if class_name == 'person' and confidence >= self.confidence_threshold:
                     human_found = True
 
@@ -120,6 +116,7 @@ class CameraYoloNode(Node):
 
         elif self.state == 'stopped':
             self.stop_pub.publish(Bool(data=True))
+
             if human_found:
                 self.stop_time = now
                 self.get_logger().warn(
@@ -129,6 +126,7 @@ class CameraYoloNode(Node):
             else:
                 elapsed = now - self.stop_time
                 remaining = self.cooldown_sec - elapsed
+
                 if elapsed >= self.cooldown_sec:
                     self.state = 'checking'
                     self.get_logger().info('🔍 Cooldown done — checking if path is clear...')

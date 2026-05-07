@@ -806,7 +806,7 @@
     // ▶ CONFIGURATION — UPDATE THESE BEFORE DEPLOYING
     // ==============================================================
 
-    var JETSON_IP = '192.168.2.2';   // Jetson / rosbridge host
+    var JETSON_IP = '192.168.137.1';   // Jetson / rosbridge host
 
     // Destination waypoints from cart_bringup (my_bot2 map frame).
     // To find the correct coordinates:
@@ -883,7 +883,7 @@
     // ==============================================================
     // 2. ROS CONNECTION
     // ==============================================================
-    var ros = new ROSLIB.Ros({ url: 'ws://' + JETSON_IP + ':9090' });
+    var ros = new ROSLIB.Ros({ url: 'ws://' + JETSON_IP + ':9091' });
 
     var statusDot  = document.getElementById('status-dot');
     var statusText = document.getElementById('status-text');

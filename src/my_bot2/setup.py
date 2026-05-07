@@ -43,6 +43,8 @@ setup(
             'cmd_vel_to_rc = my_bot2.cmd_vel_to_rc:main',
             'ros_to_pix_mavros = my_bot2.ros_to_pix_mavros:main',
             'ArduinoBridge = my_bot2.ArduinoBridge:main',
+            'reactionTime = my_bot2.reactionTime:main',
+
 
 
 

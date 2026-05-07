@@ -24,7 +24,7 @@ def generate_launch_description():
             'angle_compensate': True,
             'scan_mode': 'Standard',
             'inverted': False,
-            'max_distance': 8.0,
+            'max_distance': 12.0,
             'enable_angle_crop_func': True,
         }],
         output='screen'
@@ -67,7 +67,7 @@ def generate_launch_description():
         package='tf2_ros',
         executable='static_transform_publisher',
         name='base_to_laser_tf',
-        arguments=['0.5', '0.0', '0.5', '3.14159', '0', '0', 'base_link', 'laser']
+        arguments=['0.30', '0.0', '0.55', '3.14159', '0', '0', 'base_link', 'laser']    
     )
 
     tf_laser_to_camera = Node(
@@ -250,11 +250,22 @@ def generate_launch_description():
     #     additional_env={'LIBGL_ALWAYS_SOFTWARE': '1'},
     #     output='screen'
     # )
-
+    # Keyboard teleop node
+    teleop_node = Node(
+        package='teleop_twist_keyboard',
+        executable='teleop_twist_keyboard',
+        name='teleop_twist_keyboard',
+        output='screen',
+        prefix='xterm -e',  # Opens in a new terminal window
+        parameters=[{
+            'speed': 0.5,
+            'turn': 1.0,
+        }]
+    )
 
     return LaunchDescription([
-        rosbridge_delayed,
-        web_server,
+        # rosbridge_delayed,
+        # web_server,
         lidar_node,
         arduino_bridge_node,
     
@@ -268,5 +279,6 @@ def generate_launch_description():
 #        camera_processor_node,
         # master_brake_node,
         nav2_delayed,
+        # teleop_node,
         # rvizLaunch,
     ])
