@@ -264,7 +264,7 @@ def generate_launch_description():
     )
 
     return LaunchDescription([
-        # rosbridge_delayed,
+        rosbridge_delayed,
         # web_server,
         lidar_node,
         arduino_bridge_node,

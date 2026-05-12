@@ -1,32 +1,54 @@
 #!/usr/bin/env python3
+import math
+import time
+import serial
+
 import rclpy
 from rclpy.node import Node
 from geometry_msgs.msg import Twist
 from std_msgs.msg import Bool
-import serial
-import time
 
 
 class ArduinoBridge(Node):
     def __init__(self):
         super().__init__('arduino_bridge')
 
-        # --- CONFIGURATION ---
+        # --- SERIAL CONFIGURATION ---
         self.serial_port = '/dev/arduino'
         self.baud_rate = 115200
 
-        # Speed config
+        # --- SPEED / THROTTLE CONFIG ---
         self.MAX_SPEED = 1.0
         self.MAX_THROTTLE = 254
 
-        # Full servo PWM range
+        # --- SERVO PWM RANGE ---
         self.STEER_MIN = 1200
         self.STEER_MAX = 2200
         self.STEER_CENTER = 1700
 
-        # Nav2 angular velocity scaling (rad/s -> full steering)
-        # Match this to your Nav2 / velocity_smoother max theta velocity
-        self.MAX_NAV2_ANGULAR_Z = 2.0
+        # --- ACKERMANN GEOMETRY ---
+        # Measure wheelbase center-to-center between front and rear axle
+        self.WHEELBASE = 0.65
+
+        # Real maximum front wheel steering angle in radians
+        # 0.52 rad ≈ 30 degrees
+        self.MAX_STEER_ANGLE_RAD = 0.52
+
+        # --- SEMI-AGGRESSIVE STEERING TUNING ---
+        # Ignore very tiny steering commands to avoid servo shaking
+        self.STEER_DEADBAND_RAD = 0.03
+
+        # Gain > 1 makes steering more decisive
+        self.STEER_GAIN = 1.35
+
+        # Exponent < 1 boosts small/medium steering commands
+        self.STEER_EXPONENT = 0.85
+
+        # Optional minimum steering effect once outside deadband
+        self.MIN_EFFECTIVE_STEER_NORM = 0.18
+
+        # If speed is too low, avoid unstable division / weird steering
+        self.MIN_SPEED_FOR_STEERING = 0.05
 
         # --- HUMAN DETECTION FLAG ---
         self.person_detected = False
@@ -71,6 +93,54 @@ class ArduinoBridge(Node):
         self.arduino.write(stop_cmd.encode('utf-8'))
 
     # ------------------------------------------------------------------
+    def _twist_to_steering_angle(self, v, omega):
+        # Ackermann conversion:
+        # delta = atan(L * omega / v)
+        if abs(v) < self.MIN_SPEED_FOR_STEERING or abs(omega) < 1e-4:
+            return 0.0
+        return math.atan((self.WHEELBASE * omega) / abs(v))
+
+    def _apply_semi_aggressive_response(self, steer_angle):
+        if abs(steer_angle) < self.STEER_DEADBAND_RAD:
+            return 0.0
+
+        sign = 1.0 if steer_angle >= 0.0 else -1.0
+
+        norm = abs(steer_angle) / self.MAX_STEER_ANGLE_RAD
+        norm = self._clamp(norm, 0.0, 1.0)
+
+        # Semi-aggressive shaping
+        norm = self.STEER_GAIN * (norm ** self.STEER_EXPONENT)
+
+        # Add a minimum effect after leaving deadband so it reacts clearly
+        if norm > 0.0:
+            norm = max(norm, self.MIN_EFFECTIVE_STEER_NORM)
+
+        norm = self._clamp(norm, 0.0, 1.0)
+
+        return sign * norm * self.MAX_STEER_ANGLE_RAD
+
+    def _steering_angle_to_pwm(self, steer_angle):
+        steer_norm = steer_angle / self.MAX_STEER_ANGLE_RAD
+        steer_norm = self._clamp(steer_norm, -1.0, 1.0)
+
+        # REVERSED steering mapping:
+        # positive angular.z => opposite side from before
+        # negative angular.z => opposite side from before
+        if steer_norm > 0.0:
+            steering_pwm = int(
+                self.STEER_CENTER + steer_norm * (self.STEER_MAX - self.STEER_CENTER)
+            )
+        elif steer_norm < 0.0:
+            steering_pwm = int(
+                self.STEER_CENTER - abs(steer_norm) * (self.STEER_CENTER - self.STEER_MIN)
+            )
+        else:
+            steering_pwm = self.STEER_CENTER
+
+        steering_pwm = self._clamp(steering_pwm, self.STEER_MIN, self.STEER_MAX)
+        return steering_pwm, steer_norm
+    # ------------------------------------------------------------------
     def cmd_vel_callback(self, msg):
         self.last_cmd_time = time.time()
 
@@ -81,35 +151,27 @@ class ArduinoBridge(Node):
         linear_x = msg.linear.x
         angular_z = msg.angular.z
 
-        # THROTTLE (-254 to 254)
         v = self._clamp(linear_x, -self.MAX_SPEED, self.MAX_SPEED)
         throttle_val = int((v / self.MAX_SPEED) * self.MAX_THROTTLE)
         throttle_val = self._clamp(throttle_val, -self.MAX_THROTTLE, self.MAX_THROTTLE)
 
-        # NAV2 angular velocity -> normalized steering command [-1, 1]
-        steer_norm = angular_z / self.MAX_NAV2_ANGULAR_Z
-        steer_norm = self._clamp(steer_norm, -1.0, 1.0)
+        raw_steer_angle = self._twist_to_steering_angle(v, angular_z)
+        final_steer_angle = self._apply_semi_aggressive_response(raw_steer_angle)
 
-        # Map full normalized range to full servo PWM range
-        if steer_norm > 0.0:
-            steering_pwm = int(
-                self.STEER_CENTER - steer_norm * (self.STEER_CENTER - self.STEER_MIN)
-            )
-        elif steer_norm < 0.0:
-            steering_pwm = int(
-                self.STEER_CENTER + abs(steer_norm) * (self.STEER_MAX - self.STEER_CENTER)
-            )
-        else:
-            steering_pwm = self.STEER_CENTER
+        if v >= 0.0:
+            final_steer_angle = -final_steer_angle
 
-        steering_pwm = self._clamp(steering_pwm, self.STEER_MIN, self.STEER_MAX)
+        steering_pwm, steer_norm = self._steering_angle_to_pwm(final_steer_angle)
 
         command = f"{throttle_val},{steering_pwm}\n"
         self.arduino.write(command.encode('utf-8'))
 
         self.get_logger().info(
             f"cmd_vel: v={linear_x:.2f}, w={angular_z:.2f}, "
-            f"throttle={throttle_val}, steer_norm={steer_norm:.2f}, steer_pwm={steering_pwm}"
+            f"throttle={throttle_val}, "
+            f"raw_steer={math.degrees(raw_steer_angle):.1f}deg, "
+            f"final_steer={math.degrees(final_steer_angle):.1f}deg, "
+            f"steer_norm={steer_norm:.2f}, steer_pwm={steering_pwm}"
         )
 
     # ------------------------------------------------------------------
