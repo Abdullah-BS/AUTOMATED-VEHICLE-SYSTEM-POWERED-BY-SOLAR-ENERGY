@@ -234,6 +234,20 @@ def generate_launch_description():
         cmd=['python3', '-m', 'http.server', '8080', '--directory', "/home/ahmed/ros2_ws"],
         output='screen'
     )
+    fake_odom_node = Node(
+        package='my_bot2',
+        executable='fake_ackermann_odom',
+        name='fake_ackermann_odom',
+        parameters=[{
+            'port': '/dev/arduino',
+            'baud': 115200,
+            'wheelbase': 0.90,
+            'odom_frame': 'odom',
+            'base_frame': 'base_link',
+            'publish_tf': True,
+        }],
+        output='screen'
+    )
     
         
     # rviz_config = os.path.join(
@@ -264,20 +278,21 @@ def generate_launch_description():
     )
 
     return LaunchDescription([
-        rosbridge_delayed,
+        # rosbridge_delayed,
         # web_server,
         lidar_node,
         arduino_bridge_node,
     
         # mavros_node,           # ← THE FIX: was commented out before
-        camera_node,
+        # camera_node,
         tf_base_to_laser,
-        tf_laser_to_camera,
-        rf2o_delayed,
+        # tf_laser_to_camera,
+        # rf2o_delayed,
         # cmd_vel_bridge_delayed,
         # ekf_delayed,
 #        camera_processor_node,
         # master_brake_node,
+        # fake_odom_node,
         nav2_delayed,
         # teleop_node,
         # rvizLaunch,

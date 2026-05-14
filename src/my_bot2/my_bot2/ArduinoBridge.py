@@ -5,8 +5,10 @@ import serial
 
 import rclpy
 from rclpy.node import Node
-from geometry_msgs.msg import Twist
+from geometry_msgs.msg import Twist, TransformStamped
 from std_msgs.msg import Bool
+from nav_msgs.msg import Odometry
+from tf2_ros import TransformBroadcaster
 
 
 class ArduinoBridge(Node):
@@ -27,38 +29,39 @@ class ArduinoBridge(Node):
         self.STEER_CENTER = 1700
 
         # --- ACKERMANN GEOMETRY ---
-        # Measure wheelbase center-to-center between front and rear axle
         self.WHEELBASE = 0.65
-
-        # Real maximum front wheel steering angle in radians
-        # 0.52 rad ≈ 30 degrees
         self.MAX_STEER_ANGLE_RAD = 0.52
 
-        # --- SEMI-AGGRESSIVE STEERING TUNING ---
-        # Ignore very tiny steering commands to avoid servo shaking
+        # --- STEERING TUNING ---
         self.STEER_DEADBAND_RAD = 0.03
-
-        # Gain > 1 makes steering more decisive
         self.STEER_GAIN = 1.35
-
-        # Exponent < 1 boosts small/medium steering commands
         self.STEER_EXPONENT = 0.85
-
-        # Optional minimum steering effect once outside deadband
         self.MIN_EFFECTIVE_STEER_NORM = 0.18
-
-        # If speed is too low, avoid unstable division / weird steering
         self.MIN_SPEED_FOR_STEERING = 0.05
+
+        # --- FEEDBACK OPTIONS ---
+        self.INVERT_FEEDBACK_STEERING = False
+        self.USE_ARDUINO_POSE_IF_AVAILABLE = False
 
         # --- HUMAN DETECTION FLAG ---
         self.person_detected = False
 
+        # --- ODOM STATE ---
+        self.x = 0.0
+        self.y = 0.0
+        self.yaw = 0.0
+        self.last_odom_time = time.time()
+
+        self.odom_pub = self.create_publisher(Odometry, '/odom', 10)
+        self.tf_broadcaster = TransformBroadcaster(self)
+
         # --- CONNECT TO ARDUINO ---
         try:
-            self.arduino = serial.Serial(self.serial_port, self.baud_rate, timeout=1)
+            self.arduino = serial.Serial(self.serial_port, self.baud_rate, timeout=0.02)
             time.sleep(2)
             self.get_logger().info(f"Connected to Arduino on {self.serial_port}")
 
+            self.arduino.reset_input_buffer()
             self._send_stop()
             time.sleep(0.3)
             self.get_logger().info(f"Initialized steering to center: {self.STEER_CENTER}")
@@ -72,7 +75,8 @@ class ArduinoBridge(Node):
         self.create_subscription(Bool, '/camera_stop_signal', self.camera_stop_cb, 10)
 
         self.last_cmd_time = time.time()
-        self.timer = self.create_timer(0.1, self.failsafe_check)
+        self.failsafe_timer = self.create_timer(0.1, self.failsafe_check)
+        self.serial_timer = self.create_timer(0.02, self.read_serial_feedback)
 
     # ------------------------------------------------------------------
     def camera_stop_cb(self, msg: Bool):
@@ -94,8 +98,6 @@ class ArduinoBridge(Node):
 
     # ------------------------------------------------------------------
     def _twist_to_steering_angle(self, v, omega):
-        # Ackermann conversion:
-        # delta = atan(L * omega / v)
         if abs(v) < self.MIN_SPEED_FOR_STEERING or abs(omega) < 1e-4:
             return 0.0
         return math.atan((self.WHEELBASE * omega) / abs(v))
@@ -109,24 +111,18 @@ class ArduinoBridge(Node):
         norm = abs(steer_angle) / self.MAX_STEER_ANGLE_RAD
         norm = self._clamp(norm, 0.0, 1.0)
 
-        # Semi-aggressive shaping
         norm = self.STEER_GAIN * (norm ** self.STEER_EXPONENT)
 
-        # Add a minimum effect after leaving deadband so it reacts clearly
         if norm > 0.0:
             norm = max(norm, self.MIN_EFFECTIVE_STEER_NORM)
 
         norm = self._clamp(norm, 0.0, 1.0)
-
         return sign * norm * self.MAX_STEER_ANGLE_RAD
 
     def _steering_angle_to_pwm(self, steer_angle):
         steer_norm = steer_angle / self.MAX_STEER_ANGLE_RAD
         steer_norm = self._clamp(steer_norm, -1.0, 1.0)
 
-        # REVERSED steering mapping:
-        # positive angular.z => opposite side from before
-        # negative angular.z => opposite side from before
         if steer_norm > 0.0:
             steering_pwm = int(
                 self.STEER_CENTER + steer_norm * (self.STEER_MAX - self.STEER_CENTER)
@@ -140,6 +136,12 @@ class ArduinoBridge(Node):
 
         steering_pwm = self._clamp(steering_pwm, self.STEER_MIN, self.STEER_MAX)
         return steering_pwm, steer_norm
+
+    def _yaw_to_quaternion(self, yaw):
+        qz = math.sin(yaw / 2.0)
+        qw = math.cos(yaw / 2.0)
+        return qz, qw
+
     # ------------------------------------------------------------------
     def cmd_vel_callback(self, msg):
         self.last_cmd_time = time.time()
@@ -175,13 +177,115 @@ class ArduinoBridge(Node):
         )
 
     # ------------------------------------------------------------------
+    def read_serial_feedback(self):
+        try:
+            line = self.arduino.readline().decode('utf-8', errors='ignore').strip()
+            if not line:
+                return
+
+            if not line.startswith('FB,'):
+                return
+
+            parts = line.split(',')
+
+            if len(parts) not in (5, 8):
+                self.get_logger().warn(f"Bad feedback line: {line}")
+                return
+
+            throttle_cmd = int(parts[1])
+            steer_pwm = int(parts[2])
+            v_est = float(parts[3])
+            steer_angle = float(parts[4])
+
+            if self.INVERT_FEEDBACK_STEERING:
+                steer_angle = -steer_angle
+
+            now = time.time()
+            dt = now - self.last_odom_time
+            self.last_odom_time = now
+
+            if dt <= 0.0 or dt > 0.5:
+                return
+
+            omega = 0.0
+            if abs(self.WHEELBASE) > 1e-6:
+                omega = v_est * math.tan(steer_angle) / self.WHEELBASE
+
+            if len(parts) == 8 and self.USE_ARDUINO_POSE_IF_AVAILABLE:
+                self.x = float(parts[5])
+                self.y = float(parts[6])
+                self.yaw = float(parts[7])
+            else:
+                self.x += v_est * math.cos(self.yaw) * dt
+                self.y += v_est * math.sin(self.yaw) * dt
+                self.yaw += omega * dt
+
+            stamp = self.get_clock().now().to_msg()
+            qz, qw = self._yaw_to_quaternion(self.yaw)
+
+            odom = Odometry()
+            odom.header.stamp = stamp
+            odom.header.frame_id = 'odom'
+            odom.child_frame_id = 'base_link'
+
+            odom.pose.pose.position.x = self.x
+            odom.pose.pose.position.y = self.y
+            odom.pose.pose.position.z = 0.0
+            odom.pose.pose.orientation.x = 0.0
+            odom.pose.pose.orientation.y = 0.0
+            odom.pose.pose.orientation.z = qz
+            odom.pose.pose.orientation.w = qw
+
+            odom.twist.twist.linear.x = v_est
+            odom.twist.twist.angular.z = omega
+
+            odom.pose.covariance = [
+                0.05, 0.0, 0.0, 0.0, 0.0, 0.0,
+                0.0, 0.05, 0.0, 0.0, 0.0, 0.0,
+                0.0, 0.0, 99999.0, 0.0, 0.0, 0.0,
+                0.0, 0.0, 0.0, 99999.0, 0.0, 0.0,
+                0.0, 0.0, 0.0, 0.0, 99999.0, 0.0,
+                0.0, 0.0, 0.0, 0.0, 0.0, 0.1
+            ]
+
+            odom.twist.covariance = [
+                0.05, 0.0, 0.0, 0.0, 0.0, 0.0,
+                0.0, 0.05, 0.0, 0.0, 0.0, 0.0,
+                0.0, 0.0, 99999.0, 0.0, 0.0, 0.0,
+                0.0, 0.0, 0.0, 99999.0, 0.0, 0.0,
+                0.0, 0.0, 0.0, 0.0, 99999.0, 0.0,
+                0.0, 0.0, 0.0, 0.0, 0.0, 0.1
+            ]
+
+            self.odom_pub.publish(odom)
+
+            t = TransformStamped()
+            t.header.stamp = stamp
+            t.header.frame_id = 'odom'
+            t.child_frame_id = 'base_link'
+            t.transform.translation.x = self.x
+            t.transform.translation.y = self.y
+            t.transform.translation.z = 0.0
+            t.transform.rotation.x = 0.0
+            t.transform.rotation.y = 0.0
+            t.transform.rotation.z = qz
+            t.transform.rotation.w = qw
+            self.tf_broadcaster.sendTransform(t)
+
+        except Exception as e:
+            self.get_logger().warn(f"Serial feedback error: {e}")
+
+    # ------------------------------------------------------------------
     def failsafe_check(self):
         if self.person_detected or (time.time() - self.last_cmd_time > 0.5):
             self._send_stop()
 
     # ------------------------------------------------------------------
     def destroy_node(self):
-        self._send_stop()
+        try:
+            self._send_stop()
+        except Exception:
+            pass
         super().destroy_node()
 
 
@@ -193,8 +297,11 @@ def main(args=None):
     except KeyboardInterrupt:
         pass
     finally:
-        node._send_stop()
-        node.arduino.close()
+        try:
+            node._send_stop()
+            node.arduino.close()
+        except Exception:
+            pass
         node.destroy_node()
         rclpy.try_shutdown()
 

@@ -44,6 +44,7 @@ setup(
             'ros_to_pix_mavros = my_bot2.ros_to_pix_mavros:main',
             'ArduinoBridge = my_bot2.ArduinoBridge:main',
             'reactionTime = my_bot2.reactionTime:main',
+            'fake_ackermann_odom = my_bot2.fake_ackermann_odom:main',
 
 
 
