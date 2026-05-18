@@ -10,6 +10,8 @@ def generate_launch_description():
 
     pkg = get_package_share_directory('my_bot2')
     nav2_params = os.path.join(pkg, 'config', 'nav2_params_Ackermann.yaml')
+    ekf_config = os.path.join(pkg, 'config', 'ekf.yaml')
+
 
     # 1. Lidar
     lidar_node = Node(
@@ -30,23 +32,17 @@ def generate_launch_description():
         output='screen'
     )
 
-    # 3. MAVROS — starts immediately so heartbeat is ready before the RC bridge
-    mavros_node = Node(
-        package='mavros',
-        executable='mavros_node',
-        parameters=[{
-            'fcu_url': '/dev/ttyACM0:57600',
-            'gcs_url': '',
-            'target_system_id': 1,
-            'target_component_id': 1,
-            'time.timesync_rate': 0.0,
-            'time.system_time_rate': 1.0,
-            'time.timesync_mode': 'MAVLINK',
-        }],
-        output='screen'
+    ekf_node = Node(
+        package='robot_localization',
+        executable='ekf_node',
+        name='ekf_filter_node',
+        output='screen',
+        parameters=[ekf_config]
     )
-
     
+    ekf_delayed = TimerAction(period=6.5, actions=[ekf_node])
+
+        
         # 3. Arduino bridge
     arduino_bridge_node = Node(
         package='my_bot2',
@@ -84,10 +80,10 @@ def generate_launch_description():
         name='rf2o_laser_odometry',
         parameters=[{
             'laser_scan_topic': '/scan',
-            'odom_topic': '/odom',
-            'publish_tf': True,
             'base_frame_id': 'base_link',
             'odom_frame_id': 'odom',
+            'odom_topic': '/odom_rf2o',
+            'publish_tf': False,
             'init_pose_from_topic': '',
             'freq': 10.0,
         }],
@@ -111,34 +107,7 @@ def generate_launch_description():
         name='master_brake',
         output='screen'
     )
-
-    # 8b. cmd_vel -> Pixhawk RC-override bridge
-    #     Delayed 7s — MAVROS needs ~3-5s to establish a heartbeat with the FCU.
-    #     The extra margin ensures OverrideRCIn is not dropped at startup.
-    cmd_vel_bridge = Node(
-        package='my_bot2',
-        executable='cmd_vel_to_rc',
-        name='cmd_vel_to_rc',
-        remappings=[('/cmd_vel', '/cmd_vel_safe')],
-        parameters=[{
-            'throttle_neutral_us': 1500,
-            'throttle_fwd_us': 1600,
-            'throttle_back_us': 1400,
-            'steer_center_us': 1500,
-            'steer_right_us': 2023,
-            'steer_left_us': 1300,
-            'max_speed_fwd': 0.3,
-            'max_speed_back': 0.3,
-            'cmd_timeout_sec': 0.5,
-            'publish_rate_hz': 10.0,
-        }],
-        output='screen'
-    )
-
-    cmd_vel_bridge_delayed = TimerAction(period=7.0, actions=[cmd_vel_bridge])
-
    
-
     # 9. Nav2 Stack — delayed 8s (after MAVROS + RF2O are settled)
     map_server = Node(
         package='nav2_map_server',
@@ -234,21 +203,16 @@ def generate_launch_description():
         cmd=['python3', '-m', 'http.server', '8080', '--directory', "/home/ahmed/ros2_ws"],
         output='screen'
     )
-    fake_odom_node = Node(
-        package='my_bot2',
-        executable='fake_ackermann_odom',
-        name='fake_ackermann_odom',
-        parameters=[{
-            'port': '/dev/arduino',
-            'baud': 115200,
-            'wheelbase': 0.90,
-            'odom_frame': 'odom',
-            'base_frame': 'base_link',
-            'publish_tf': True,
-        }],
-        output='screen'
-    )
     
+    
+    web_goal_bridge_node = Node(
+        package='my_bot2',
+        executable='web_goal_bridge',
+        name='web_goal_bridge',
+        output='screen',
+        emulate_tty=True
+    )
+
         
     # rviz_config = os.path.join(
     #     get_package_share_directory('my_bot2'),
@@ -278,22 +242,24 @@ def generate_launch_description():
     )
 
     return LaunchDescription([
-        # rosbridge_delayed,
-        # web_server,
+        rosbridge_delayed,
+        web_server,
         lidar_node,
         arduino_bridge_node,
+        web_goal_bridge_node,
+
     
         # mavros_node,           # ← THE FIX: was commented out before
         # camera_node,
         tf_base_to_laser,
         # tf_laser_to_camera,
-        # rf2o_delayed,
-        # cmd_vel_bridge_delayed,
-        # ekf_delayed,
+        rf2o_delayed,
+
+        ekf_delayed,
 #        camera_processor_node,
         # master_brake_node,
-        # fake_odom_node,
         nav2_delayed,
         # teleop_node,
         # rvizLaunch,
+
     ])

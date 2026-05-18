@@ -45,6 +45,8 @@ setup(
             'ArduinoBridge = my_bot2.ArduinoBridge:main',
             'reactionTime = my_bot2.reactionTime:main',
             'fake_ackermann_odom = my_bot2.fake_ackermann_odom:main',
+            'web_goal_bridge = my_bot2.web_goal_bridge:main',
+
 
 
 

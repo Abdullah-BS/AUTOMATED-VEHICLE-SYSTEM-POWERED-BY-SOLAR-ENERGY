@@ -5,10 +5,9 @@ import serial
 
 import rclpy
 from rclpy.node import Node
-from geometry_msgs.msg import Twist, TransformStamped
+from geometry_msgs.msg import Twist
 from std_msgs.msg import Bool
 from nav_msgs.msg import Odometry
-from tf2_ros import TransformBroadcaster
 
 
 class ArduinoBridge(Node):
@@ -52,8 +51,7 @@ class ArduinoBridge(Node):
         self.yaw = 0.0
         self.last_odom_time = time.time()
 
-        self.odom_pub = self.create_publisher(Odometry, '/odom', 10)
-        self.tf_broadcaster = TransformBroadcaster(self)
+        self.odom_pub = self.create_publisher(Odometry, '/odom_arduino', 10)
 
         # --- CONNECT TO ARDUINO ---
         try:
@@ -78,7 +76,6 @@ class ArduinoBridge(Node):
         self.failsafe_timer = self.create_timer(0.1, self.failsafe_check)
         self.serial_timer = self.create_timer(0.02, self.read_serial_feedback)
 
-    # ------------------------------------------------------------------
     def camera_stop_cb(self, msg: Bool):
         if msg.data and not self.person_detected:
             self.get_logger().warn('🚨 HUMAN DETECTED — Sending stop to Arduino!')
@@ -88,7 +85,6 @@ class ArduinoBridge(Node):
 
         self.person_detected = msg.data
 
-    # ------------------------------------------------------------------
     def _clamp(self, value, low, high):
         return max(low, min(value, high))
 
@@ -96,7 +92,6 @@ class ArduinoBridge(Node):
         stop_cmd = f"0,{self.STEER_CENTER}\n"
         self.arduino.write(stop_cmd.encode('utf-8'))
 
-    # ------------------------------------------------------------------
     def _twist_to_steering_angle(self, v, omega):
         if abs(v) < self.MIN_SPEED_FOR_STEERING or abs(omega) < 1e-4:
             return 0.0
@@ -142,7 +137,6 @@ class ArduinoBridge(Node):
         qw = math.cos(yaw / 2.0)
         return qz, qw
 
-    # ------------------------------------------------------------------
     def cmd_vel_callback(self, msg):
         self.last_cmd_time = time.time()
 
@@ -176,7 +170,6 @@ class ArduinoBridge(Node):
             f"steer_norm={steer_norm:.2f}, steer_pwm={steering_pwm}"
         )
 
-    # ------------------------------------------------------------------
     def read_serial_feedback(self):
         try:
             line = self.arduino.readline().decode('utf-8', errors='ignore').strip()
@@ -259,28 +252,13 @@ class ArduinoBridge(Node):
 
             self.odom_pub.publish(odom)
 
-            t = TransformStamped()
-            t.header.stamp = stamp
-            t.header.frame_id = 'odom'
-            t.child_frame_id = 'base_link'
-            t.transform.translation.x = self.x
-            t.transform.translation.y = self.y
-            t.transform.translation.z = 0.0
-            t.transform.rotation.x = 0.0
-            t.transform.rotation.y = 0.0
-            t.transform.rotation.z = qz
-            t.transform.rotation.w = qw
-            self.tf_broadcaster.sendTransform(t)
-
         except Exception as e:
             self.get_logger().warn(f"Serial feedback error: {e}")
 
-    # ------------------------------------------------------------------
     def failsafe_check(self):
         if self.person_detected or (time.time() - self.last_cmd_time > 0.5):
             self._send_stop()
 
-    # ------------------------------------------------------------------
     def destroy_node(self):
         try:
             self._send_stop()

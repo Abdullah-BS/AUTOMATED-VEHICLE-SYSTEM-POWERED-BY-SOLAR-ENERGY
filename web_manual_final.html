@@ -29,7 +29,6 @@
         button{cursor:pointer;border:none;background:none;color:inherit;font:inherit}
         button:focus-visible{outline:2px solid var(--green);outline-offset:2px;border-radius:var(--r-sm)}
 
-        /* HEADER */
         header{height:var(--header-h);background:var(--surface);border-bottom:1px solid var(--border-strong);display:flex;align-items:center;justify-content:space-between;padding:0 20px;flex-shrink:0;z-index:10}
         .brand{display:flex;align-items:center;gap:10px}
         .brand-logo{width:32px;height:32px;flex-shrink:0}
@@ -41,7 +40,6 @@
         #status-dot.error{background:var(--red)}
         @keyframes pdot{0%{box-shadow:0 0 0 0 rgba(0,166,81,.6)}70%{box-shadow:0 0 0 8px rgba(0,166,81,0)}100%{box-shadow:0 0 0 0 rgba(0,166,81,0)}}
 
-        /* TELEMETRY */
         .telem-bar{height:var(--telem-h);background:var(--surface);border-bottom:1px solid var(--border);display:flex;flex-shrink:0}
         .tel{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;border-right:1px solid var(--border);gap:3px}
         .tel:last-child{border-right:none}
@@ -50,12 +48,10 @@
         .tel-value.neutral{color:var(--text);font-size:13px;font-weight:600}
         .tel-unit{font-size:11px;color:var(--text-muted);font-weight:400}
 
-        /* SHELL */
         .app-shell{flex:1;display:flex;flex-direction:column;overflow:hidden;position:relative}
         .sidebar{display:none}
         #app-content{flex:1;position:relative;overflow:hidden}
 
-        /* MOBILE FOOTER */
         footer{height:var(--footer-h);background:var(--surface);border-top:1px solid var(--border-strong);display:flex;align-items:center;gap:6px;padding:6px 10px;flex-shrink:0}
         .tab-btn{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;padding:8px 4px;border-radius:var(--r-md);font-size:11px;font-weight:600;color:var(--text-muted);transition:color var(--tr),background var(--tr)}
         .tab-btn i{font-size:18px}
@@ -65,7 +61,6 @@
         .btn-estop:active{background:var(--red-hover);transform:scale(.96)}
         .btn-estop i{font-size:16px}
 
-        /* DESKTOP */
         @media(min-width:768px){
             .app-shell{flex-direction:row}
             footer{display:none}
@@ -80,14 +75,12 @@
             #app-content{flex:1}
         }
 
-        /* PAGES */
         .page-view{position:absolute;inset:0;padding:20px;display:none;flex-direction:column;gap:16px;overflow-y:auto}
         .page-view.active{display:flex}
         @media(min-width:768px){.page-view{padding:28px 32px}}
         .page-title{font-size:20px;font-weight:700;color:var(--text);margin-bottom:4px}
         .page-sub{font-size:13px;color:var(--text-muted)}
 
-        /* NAVIGATE PAGE */
         .nav-banner{display:none;align-items:center;gap:10px;background:var(--green-dim);border:1px solid rgba(0,166,81,.3);border-radius:var(--r-md);padding:12px 16px;font-size:14px;font-weight:500;color:var(--green)}
         .nav-banner.visible{display:flex}
         .spinner{width:16px;height:16px;border:2px solid rgba(0,166,81,.3);border-top-color:var(--green);border-radius:50%;animation:spin .8s linear infinite;flex-shrink:0}
@@ -105,7 +98,6 @@
         .dest-name{font-size:13px;font-weight:600;text-align:center;color:var(--text)}
         .dest-coords{font-size:10px;color:var(--text-faint);font-family:monospace;margin-top:-4px}
 
-        /* MAP PAGE */
         #page-map{padding-bottom:0}
         .map-toolbar{display:flex;align-items:center;gap:10px;flex-shrink:0}
         .map-tool-btn{display:flex;align-items:center;gap:8px;background:var(--surface);border:1px solid var(--border);border-radius:var(--r-md);padding:8px 16px;font-size:13px;font-weight:600;color:var(--text-muted);transition:all var(--tr)}
@@ -115,8 +107,7 @@
         #map-container{flex:1;min-height:260px;background:#1a1f1a;border-radius:var(--r-lg);border:1px solid var(--border);display:flex;justify-content:center;align-items:center;overflow:hidden;position:relative;touch-action:none}
         #map-container canvas{width:100% !important;height:100% !important;object-fit:contain}
         #map-loading-text{color:var(--text-faint);font-size:14px}
-        /* goal preview popup */
-        #goal-popup{position:absolute;bottom:14px;left:50%;transform:translateX(-50%);background:rgba(26,26,26,.95);border:1px solid rgba(0,166,81,.4);border-radius:var(--r-lg);padding:12px 18px;display:none;flex-direction:column;gap:8px;z-index:20;min-width:240px;backdrop-filter:blur(8px)}#pose-popup{position:absolute;bottom:14px;left:50%;transform:translateX(-50%);background:rgba(26,26,26,.95);border:1px solid rgba(0,166,81,.4);border-radius:var(--r-lg);padding:12px 18px;display:none;flex-direction:column;gap:8px;z-index:20;min-width:240px;backdrop-filter:blur(8px)}
+        #goal-popup,#pose-popup{position:absolute;bottom:14px;left:50%;transform:translateX(-50%);background:rgba(26,26,26,.95);border:1px solid rgba(0,166,81,.4);border-radius:var(--r-lg);padding:12px 18px;display:none;flex-direction:column;gap:8px;z-index:20;min-width:240px;backdrop-filter:blur(8px)}
         #goal-popup.visible, #pose-popup.visible{display:flex}
         .gp-label{font-size:11px;color:var(--text-faint);text-transform:uppercase;letter-spacing:1px}
         .gp-coords{font-size:14px;font-weight:600;font-family:monospace;color:var(--green)}
@@ -127,10 +118,8 @@
         .gp-confirm:hover{background:var(--green-hover)}
         .gp-cancel{background:var(--surface-2);color:var(--text-muted);border:1px solid var(--border)}
         .gp-cancel:hover{background:var(--surface-hover)}
-        /* cursor in goal mode */
         #map-container.goal-mode{cursor:crosshair}
 
-        /* DIAGNOSTICS */
         .diag-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--r-lg);overflow:hidden}
         .diag-item{display:flex;align-items:center;justify-content:space-between;padding:15px 18px;border-bottom:1px solid var(--border)}
         .diag-item:last-child{border-bottom:none}
@@ -142,7 +131,6 @@
         .badge-warn{background:rgba(245,158,11,.12);color:var(--amber)}
         .badge-error{background:rgba(229,57,53,.12);color:#ff5252}
 
-        /* MANUAL */
         #page-manual{justify-content:center;align-items:center}
         .camera-alert{background:var(--red-dim);border:1px solid rgba(229,57,53,.4);border-radius:var(--r-md);padding:10px 16px;font-size:13px;font-weight:600;color:var(--red);display:none;align-items:center;gap:8px;width:100%;max-width:310px}
         .camera-alert.visible{display:flex}
@@ -158,7 +146,6 @@
         .speed-header span:last-child{font-size:15px;font-weight:700;color:var(--green)}
         input[type=range]{width:100%;accent-color:var(--green);cursor:pointer;height:4px}
 
-        /* TOAST */
         #toast{position:fixed;bottom:calc(var(--footer-h) + 12px);left:50%;transform:translateX(-50%) translateY(10px);background:var(--surface-2);border:1px solid var(--border-strong);border-radius:var(--r-md);padding:10px 18px;font-size:13px;font-weight:500;white-space:nowrap;opacity:0;pointer-events:none;transition:opacity .2s,transform .2s;z-index:100}
         #toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
         #toast.toast-success{border-color:rgba(0,166,81,.4);color:#00c060}
@@ -169,7 +156,6 @@
 </head>
 <body>
 
-<!-- HEADER -->
 <header>
     <div class="brand">
         <svg class="brand-logo" viewBox="0 0 32 32" fill="none">
@@ -189,7 +175,6 @@
     </div>
 </header>
 
-<!-- TELEMETRY -->
 <div class="telem-bar">
     <div class="tel"><span class="tel-label">Speed</span><span class="tel-value" id="tel-speed">0.0 <span class="tel-unit">m/s</span></span></div>
     <div class="tel"><span class="tel-label">Battery</span><span class="tel-value">78 <span class="tel-unit">%</span></span></div>
@@ -197,9 +182,7 @@
     <div class="tel"><span class="tel-label">Target</span><span class="tel-value neutral" id="tel-target">—</span></div>
 </div>
 
-<!-- APP SHELL -->
 <div class="app-shell">
-    <!-- Desktop Sidebar -->
     <nav class="sidebar">
         <div class="sidebar-label">Navigation</div>
         <button class="tab-btn active" id="sb-nav" onclick="switchTab('nav',this)"><i class="fas fa-map-marker-alt"></i>Navigate</button>
@@ -212,22 +195,19 @@
 
     <div id="app-content">
 
-        <!-- NAVIGATE PAGE -->
         <div id="page-nav" class="page-view active">
-            <div><div class="page-title">Select Destination</div><div class="page-sub">Nav2 navigates the cart to the chosen map point</div></div>
+            <div><div class="page-title">Select Destination</div><div class="page-sub">Send a destination string to ROS and let the bridge node handle Nav2</div></div>
             <div class="nav-banner" id="nav-banner">
                 <div class="spinner"></div>
-                <span id="nav-banner-text">Navigating…</span>
+                <span id="nav-banner-text">Sending…</span>
                 <button class="cancel-nav" onclick="cancelNavigation()">Cancel</button>
             </div>
             <div class="destination-grid" id="dest-grid"></div>
         </div>
 
-        <!-- MAP PAGE -->
         <div id="page-map" class="page-view">
             <div><div class="page-title">Live Navigation Map</div><div class="page-sub">Click &amp; drag on the map to send a custom Nav2 goal</div></div>
 
-            <!-- toolbar -->
             <div class="map-toolbar">
                 <button class="map-tool-btn" id="pose-mode-btn" onclick="togglePoseMode()">
                     <i class="fas fa-map-pin"></i><span>Set Pose</span>
@@ -238,10 +218,9 @@
                 <span class="map-hint" id="map-hint">Set Pose first, then Set Goal</span>
             </div>
 
-            <!-- map canvas area -->
             <div id="map-container">
                 <p id="map-loading-text">Waiting for map data…</p>
-                <!-- goal confirmation popup (inside container so it overlays map) -->
+
                 <div id="goal-popup" onmousedown="event.stopPropagation()" onmouseup="event.stopPropagation()" ontouchstart="event.stopPropagation()" ontouchend="event.stopPropagation()">
                     <div class="gp-label">Custom Goal</div>
                     <div class="gp-coords" id="gp-coords">x: 0.00 &nbsp; y: 0.00</div>
@@ -252,7 +231,6 @@
                     </div>
                 </div>
 
-                <!-- POSE confirmation popup -->
                 <div id="pose-popup"
                      onmousedown="event.stopPropagation()" onmouseup="event.stopPropagation()"
                      ontouchstart="event.stopPropagation()" ontouchend="event.stopPropagation()">
@@ -267,7 +245,6 @@
             </div>
         </div>
 
-        <!-- DIAGNOSTICS PAGE -->
         <div id="page-diag" class="page-view">
             <div><div class="page-title">System Diagnostics</div><div class="page-sub">Live subsystem health</div></div>
             <div class="diag-card">
@@ -280,7 +257,6 @@
             </div>
         </div>
 
-        <!-- MANUAL PAGE -->
         <div id="page-manual" class="page-view">
             <div class="manual-label">Manual Drive</div>
             <div class="camera-alert" id="camera-alert"><i class="fas fa-exclamation-triangle"></i>CAMERA STOP — Person / Animal Detected</div>
@@ -288,9 +264,9 @@
                 <div></div>
                 <button class="dpad-btn" onmousedown="startMove(1,0)" onmouseup="stopMove()" onmouseleave="stopMove()" ontouchstart="startMove(1,0)" ontouchend="stopMove()"><i class="fas fa-arrow-up"></i></button>
                 <div></div>
-                <button class="dpad-btn" onmousedown="startMove(0,-1)" onmouseup="stopMove()" onmouseleave="stopMove()" ontouchstart="startMove(0,-1)" ontouchend="stopMove()"><i class="fas fa-arrow-left"></i></button>
+                <button class="dpad-btn" onmousedown="startMove(1,1)" onmouseup="stopMove()" onmouseleave="stopMove()" ontouchstart="startMove(0,-1)" ontouchend="stopMove()"><i class="fas fa-arrow-left"></i></button>
                 <button class="dpad-btn stop-btn" onclick="stopMove()">STOP</button>
-                <button class="dpad-btn" onmousedown="startMove(0,1)" onmouseup="stopMove()" onmouseleave="stopMove()" ontouchstart="startMove(0,1)" ontouchend="stopMove()"><i class="fas fa-arrow-right"></i></button>
+                <button class="dpad-btn" onmousedown="startMove(1,-1)" onmouseup="stopMove()" onmouseleave="stopMove()" ontouchstart="startMove(0,1)" ontouchend="stopMove()"><i class="fas fa-arrow-right"></i></button>
                 <div></div>
                 <button class="dpad-btn" onmousedown="startMove(-1,0)" onmouseup="stopMove()" onmouseleave="stopMove()" ontouchstart="startMove(-1,0)" ontouchend="stopMove()"><i class="fas fa-arrow-down"></i></button>
                 <div></div>
@@ -301,10 +277,9 @@
             </div>
         </div>
 
-    </div><!-- /#app-content -->
-</div><!-- /.app-shell -->
+    </div>
+</div>
 
-<!-- Mobile Footer -->
 <footer>
     <button class="tab-btn active" id="tab-nav" onclick="switchTab('nav',this)"><i class="fas fa-map-marker-alt"></i>Navigate</button>
     <button class="tab-btn" id="tab-manual" onclick="switchTab('manual',this)"><i class="fas fa-gamepad"></i>Manual</button>
@@ -316,138 +291,153 @@
 <div id="toast" role="status" aria-live="polite"></div>
 
 <script>
-// =============================================================
-// CONFIG — update before deploying
-// =============================================================
-var JETSON_IP = '192.168.137.1';
+var JETSON_IP = '127.0.0.1';
 
-// Preset destinations — fill in your real map coordinates
-// How to get them: ros2 topic echo /goal_pose --once  (after clicking Nav2 Goal in RViz2)
 var DESTINATIONS = [
     { id:'engineering', name:'Engineering',       icon:'fa-university',       x: 1.50, y:-0.50, yaw: 0.0  },
-    { id:'cafeteria',   name:'Cafeteria',          icon:'fa-coffee',           x: 3.00, y: 1.20, yaw: 1.57 },
-    { id:'library',     name:'Library',            icon:'fa-book',             x:-1.00, y: 2.50, yaw: 3.14 },
-    { id:'mosque',      name:'Mosque',             icon:'fa-mosque',           x: 0.00, y:-2.00, yaw:-1.57 },
-    { id:'charging',    name:'Charging Station',   icon:'fa-charging-station', x: 0.00, y: 0.00, yaw: 0.0  }
+    { id:'cafeteria',   name:'Cafeteria',         icon:'fa-coffee',           x: 3.00, y: 1.20, yaw: 1.57 },
+    { id:'library',     name:'Library',           icon:'fa-book',             x:-1.00, y: 2.50, yaw: 3.14 },
+    { id:'mosque',      name:'Mosque',            icon:'fa-mosque',           x: 0.00, y:-2.00, yaw:-1.57 },
+    { id:'charging',    name:'Charging Station',  icon:'fa-charging-station', x: 0.00, y: 0.00, yaw: 0.0  }
 ];
 
-// =============================================================
-// BUILD DESTINATION CARDS
-// =============================================================
 DESTINATIONS.forEach(function(d) {
     var c = document.createElement('div');
-    c.className = 'dest-card'; c.id = 'dest-'+d.id;
-    c.setAttribute('role','button'); c.setAttribute('tabindex','0');
-    c.innerHTML = '<i class="fas '+d.icon+' dest-icon"></i>'
-                + '<span class="dest-name">'+d.name+'</span>'
-                + '<span class="dest-coords">x:'+d.x.toFixed(2)+' y:'+d.y.toFixed(2)+'</span>';
+    c.className = 'dest-card';
+    c.id = 'dest-' + d.id;
+    c.setAttribute('role','button');
+    c.setAttribute('tabindex','0');
+    c.innerHTML =
+        '<i class="fas ' + d.icon + ' dest-icon"></i>' +
+        '<span class="dest-name">' + d.name + '</span>' +
+        '<span class="dest-coords">x:' + d.x.toFixed(2) + ' y:' + d.y.toFixed(2) + '</span>';
     c.addEventListener('click', function(){ navigateTo(d); });
-    c.addEventListener('keydown', function(e){ if(e.key==='Enter'||e.key===' ') navigateTo(d); });
+    c.addEventListener('keydown', function(e){ if(e.key === 'Enter' || e.key === ' ') navigateTo(d); });
     document.getElementById('dest-grid').appendChild(c);
 });
 
-// =============================================================
-// ROS CONNECTION
-// =============================================================
-var ros = new ROSLIB.Ros({ url:'ws://'+JETSON_IP+':9091' });
+var ros = new ROSLIB.Ros({ url:'ws://' + JETSON_IP + ':9090' });
 var statusDot  = document.getElementById('status-dot');
 var statusText = document.getElementById('status-text');
 var diagRos    = document.getElementById('diag-ros');
 
 ros.on('connection', function(){
-    statusText.textContent='Connected'; statusDot.className='connected';
-    diagRos.className='badge badge-good'; diagRos.innerHTML='<i class="fas fa-check-circle"></i> Connected';
-});
-ros.on('error', function(){
-    statusText.textContent='Error'; statusDot.className='error';
-    diagRos.className='badge badge-error'; diagRos.innerHTML='<i class="fas fa-times-circle"></i> Error';
-});
-ros.on('close', function(){
-    statusText.textContent='Disconnected'; statusDot.className='';
-    diagRos.className='badge badge-warn'; diagRos.innerHTML='<i class="fas fa-exclamation-circle"></i> Closed';
+    statusText.textContent='Connected';
+    statusDot.className='connected';
+    diagRos.className='badge badge-good';
+    diagRos.innerHTML='<i class="fas fa-check-circle"></i> Connected';
 });
 
-// =============================================================
-// PUBLISHERS
-// =============================================================
+ros.on('error', function(){
+    statusText.textContent='Error';
+    statusDot.className='error';
+    diagRos.className='badge badge-error';
+    diagRos.innerHTML='<i class="fas fa-times-circle"></i> Error';
+});
+
+ros.on('close', function(){
+    statusText.textContent='Disconnected';
+    statusDot.className='';
+    diagRos.className='badge badge-warn';
+    diagRos.innerHTML='<i class="fas fa-exclamation-circle"></i> Closed';
+});
+
 var cmdVelTopic = new ROSLIB.Topic({ ros:ros, name:'/cmd_vel', messageType:'geometry_msgs/msg/Twist' });
 var uiTopic     = new ROSLIB.Topic({ ros:ros, name:'/web_commands', messageType:'std_msgs/msg/String' });
 
-// /initialpose — sets AMCL starting position (like RViz2 "2D Pose Estimate")
 var initialPoseTopic = new ROSLIB.Topic({
     ros: ros,
     name: '/initialpose',
     messageType: 'geometry_msgs/msg/PoseWithCovarianceStamped'
 });
 
-// =============================================================
-// NAV2 ACTION CLIENT
-// =============================================================
-var navClient = new ROSLIB.ActionClient({ ros:ros, serverName:'/navigate_to_pose', actionName:'nav2_msgs/action/NavigateToPose' });
+var navClient = new ROSLIB.ActionClient({
+    ros:ros,
+    serverName:'/navigate_to_pose',
+    actionName:'nav2_msgs/action/NavigateToPose'
+});
 var currentGoal = null;
 
-function yawToQuat(yaw){ return { x:0, y:0, z:Math.sin(yaw/2), w:Math.cos(yaw/2) }; }
+function yawToQuat(yaw){
+    return { x:0, y:0, z:Math.sin(yaw/2), w:Math.cos(yaw/2) };
+}
 
 function sendNav2Goal(label, x, y, yaw) {
-    if(window.navigator&&window.navigator.vibrate) window.navigator.vibrate(30);
+    if(window.navigator && window.navigator.vibrate) window.navigator.vibrate(30);
     if(currentGoal){ currentGoal.cancel(); }
+
     document.getElementById('tel-target').textContent = label;
     document.getElementById('tel-mode').textContent   = 'Auto-Nav';
-    document.getElementById('nav-banner-text').textContent = 'Navigating to '+label+'…';
+    document.getElementById('nav-banner-text').textContent = 'Navigating to ' + label + '…';
     document.getElementById('nav-banner').classList.add('visible');
-    showToast('Goal sent → '+label,'success');
-    uiTopic.publish(new ROSLIB.Message({data:label}));
+    showToast('Map goal sent → ' + label, 'success');
+
     currentGoal = new ROSLIB.Goal({
         actionClient: navClient,
-        goalMessage: { pose:{ header:{frame_id:'map'}, pose:{ position:{x:x,y:y,z:0}, orientation:yawToQuat(yaw) } } }
+        goalMessage: {
+            pose:{
+                header:{frame_id:'map'},
+                pose:{
+                    position:{x:x,y:y,z:0},
+                    orientation:yawToQuat(yaw)
+                }
+            }
+        }
     });
+
     currentGoal.on('result', function(){
-        currentGoal=null;
+        currentGoal = null;
         document.getElementById('nav-banner').classList.remove('visible');
-        document.querySelectorAll('.dest-card').forEach(function(c){c.classList.remove('active');});
+        document.querySelectorAll('.dest-card').forEach(function(c){ c.classList.remove('active'); });
         document.getElementById('tel-target').textContent='Arrived';
         document.getElementById('tel-mode').textContent='Standby';
-        showToast('Arrived at '+label+' ✓','success');
-        if(window.navigator&&window.navigator.vibrate) window.navigator.vibrate([80,40,80]);
+        showToast('Arrived at ' + label + ' ✓','success');
+        if(window.navigator && window.navigator.vibrate) window.navigator.vibrate([80,40,80]);
     });
+
     currentGoal.send();
 }
 
 function navigateTo(dest) {
-    document.querySelectorAll('.dest-card').forEach(function(c){c.classList.remove('active');});
-    document.getElementById('dest-'+dest.id).classList.add('active');
-    sendNav2Goal(dest.name, dest.x, dest.y, dest.yaw);
+    document.querySelectorAll('.dest-card').forEach(function(c){ c.classList.remove('active'); });
+    document.getElementById('dest-' + dest.id).classList.add('active');
+
+    uiTopic.publish(new ROSLIB.Message({
+        data: dest.name
+    }));
+
+    document.getElementById('tel-target').textContent = dest.name;
+    document.getElementById('tel-mode').textContent = 'Auto-Nav';
+    document.getElementById('nav-banner-text').textContent = 'Sending ' + dest.name + '…';
+    document.getElementById('nav-banner').classList.add('visible');
+    showToast('Command sent → ' + dest.name, 'success');
 }
 
 function cancelNavigation() {
-    if(currentGoal){ currentGoal.cancel(); currentGoal=null; }
+    if(currentGoal){ currentGoal.cancel(); currentGoal = null; }
     document.getElementById('nav-banner').classList.remove('visible');
-    document.querySelectorAll('.dest-card').forEach(function(c){c.classList.remove('active');});
+    document.querySelectorAll('.dest-card').forEach(function(c){ c.classList.remove('active'); });
     document.getElementById('tel-target').textContent='—';
     document.getElementById('tel-mode').textContent='Standby';
     uiTopic.publish(new ROSLIB.Message({data:'CANCEL'}));
     showToast('Navigation cancelled','warn');
 }
 
-// =============================================================
-// CAMERA STOP SUBSCRIBER
-// =============================================================
 var cameraAlert = document.getElementById('camera-alert');
 var diagCamera  = document.getElementById('diag-camera');
 var cameraSub = new ROSLIB.Topic({ros:ros,name:'/camera_stop_signal',messageType:'std_msgs/msg/Bool'});
 cameraSub.subscribe(function(msg){
     if(msg.data){
         cameraAlert.classList.add('visible');
-        diagCamera.className='badge badge-warn'; diagCamera.innerHTML='<i class="fas fa-exclamation-circle"></i> Person Detected';
+        diagCamera.className='badge badge-warn';
+        diagCamera.innerHTML='<i class="fas fa-exclamation-circle"></i> Person Detected';
     } else {
         cameraAlert.classList.remove('visible');
-        diagCamera.className='badge badge-good'; diagCamera.innerHTML='<i class="fas fa-check-circle"></i> Clear';
+        diagCamera.className='badge badge-good';
+        diagCamera.innerHTML='<i class="fas fa-check-circle"></i> Clear';
     }
 });
 
-// =============================================================
-// MANUAL DRIVE
-// =============================================================
 var driveSpeed=0.35, moveInterval=null;
 function updateSpeed(v){ driveSpeed=parseFloat(v); document.getElementById('speed-val').textContent=driveSpeed.toFixed(2)+' m/s'; }
 function publishTwist(lin,ang){ cmdVelTopic.publish(new ROSLIB.Message({linear:{x:lin,y:0,z:0},angular:{x:0,y:0,z:ang}})); }
@@ -460,15 +450,13 @@ function startMove(linDir,angDir){
 }
 function stopMove(){ if(moveInterval){clearInterval(moveInterval);moveInterval=null;} publishTwist(0,0); }
 function emergencyStop(){
-    stopMove(); cancelNavigation();
+    stopMove();
+    cancelNavigation();
     uiTopic.publish(new ROSLIB.Message({data:'EMERGENCY STOP'}));
     if(window.navigator&&window.navigator.vibrate) window.navigator.vibrate([150,50,150]);
     showToast('EMERGENCY STOP sent','error');
 }
 
-// =============================================================
-// TAB SWITCHING
-// =============================================================
 function switchTab(id, btn){
     document.querySelectorAll('.page-view').forEach(function(p){p.classList.remove('active');});
     document.getElementById('page-'+id).classList.add('active');
@@ -478,15 +466,12 @@ function switchTab(id, btn){
     if(s) s.classList.add('active');
 }
 
-// =============================================================
-// LIVE MAP + CLICK-TO-SET-GOAL
-// =============================================================
 var viewer, gridClient, robotMarker, pathShape;
 var goalPinShape, goalArrowShape;
-var goalMode   = false;
+var goalMode = false;
 var isDragging = false;
-var dragStartCanvas = null;   // {x,y} in canvas pixels
-var pendingGoal     = null;   // {x,y,yaw} in map frame — awaiting confirmation
+var dragStartCanvas = null;
+var pendingGoal = null;
 
 function initMap(){
     if(viewer) return;
@@ -499,35 +484,31 @@ function initMap(){
         viewer.shift(gridClient.currentGrid.pose.position.x, gridClient.currentGrid.pose.position.y);
     });
 
-    // Robot marker
     robotMarker = new createjs.Shape();
     robotMarker.graphics.beginFill('#00a651').moveTo(-5,-3.5).lineTo(7,0).lineTo(-5,3.5).closePath().endFill();
-    robotMarker.scaleX=robotMarker.scaleY=0.5; robotMarker.visible=false;
+    robotMarker.scaleX=robotMarker.scaleY=0.5;
+    robotMarker.visible=false;
     viewer.scene.addChild(robotMarker);
 
-    // Goal pin (circle)
     goalPinShape = new createjs.Shape();
     viewer.scene.addChild(goalPinShape);
 
-    // Goal arrow (direction indicator)
     goalArrowShape = new createjs.Shape();
     viewer.scene.addChild(goalArrowShape);
 
-    // Path shape
     pathShape = new createjs.Shape();
     viewer.scene.addChild(pathShape);
 
-    // AMCL pose
     var poseSub = new ROSLIB.Topic({ros:ros,name:'/amcl_pose',messageType:'geometry_msgs/msg/PoseWithCovarianceStamped'});
     poseSub.subscribe(function(msg){
         var p=msg.pose.pose;
-        robotMarker.x=p.position.x; robotMarker.y=-p.position.y;
+        robotMarker.x=p.position.x;
+        robotMarker.y=-p.position.y;
         var q=p.orientation;
         robotMarker.rotation=-Math.atan2(2*(q.w*q.z+q.x*q.y),1-2*(q.y*q.y+q.z*q.z))*(180/Math.PI);
         robotMarker.visible=true;
     });
 
-    // Planned path
     var pathSub = new ROSLIB.Topic({ros:ros,name:'/plan',messageType:'nav_msgs/Path'});
     pathSub.subscribe(function(msg){
         pathShape.graphics.clear();
@@ -535,39 +516,37 @@ function initMap(){
             pathShape.graphics.setStrokeStyle(0.08).beginStroke('rgba(0,200,80,.7)');
             var s=msg.poses[0].pose.position;
             pathShape.graphics.moveTo(s.x,-s.y);
-            for(var i=1;i<msg.poses.length;i++){ var pt=msg.poses[i].pose.position; pathShape.graphics.lineTo(pt.x,-pt.y); }
+            for(var i=1;i<msg.poses.length;i++){
+                var pt=msg.poses[i].pose.position;
+                pathShape.graphics.lineTo(pt.x,-pt.y);
+            }
             pathShape.graphics.endStroke();
         }
     });
 
-    // Attach pointer events for goal-setting
     attachMapEvents();
 }
 
-// ── Coordinate conversion: CSS pixels on map-container → ROS map frame ──
 function cssToMap(cssX, cssY){
     var canvas = viewer.scene.canvas;
-    // CSS size vs internal canvas resolution
     var rect = canvas.getBoundingClientRect();
-    var rx = canvas.width  / rect.width;
+    var rx = canvas.width / rect.width;
     var ry = canvas.height / rect.height;
     var cx = cssX * rx;
     var cy = cssY * ry;
-    var mx =  (cx - viewer.scene.x) / viewer.scene.scaleX;
+    var mx = (cx - viewer.scene.x) / viewer.scene.scaleX;
     var my = -(cy - viewer.scene.y) / viewer.scene.scaleY;
     return { x: mx, y: my };
 }
 
 function drawGoalPin(mapX, mapY, yaw, dragging){
     goalPinShape.graphics.clear();
-    // outer ring
     goalPinShape.graphics.setStrokeStyle(0.08).beginStroke(dragging?'#fff':'rgba(255,255,255,.6)').beginFill('rgba(0,166,81,.85)').drawCircle(mapX,-mapY,0.25).endFill();
     goalArrowShape.graphics.clear();
     if(yaw !== null){
         var len=0.7, aw=0.12;
         var ex=mapX+len*Math.cos(yaw), ey=-mapY-len*Math.sin(yaw);
         goalArrowShape.graphics.setStrokeStyle(0.1).beginStroke('#00ff80').moveTo(mapX,-mapY).lineTo(ex,ey).endStroke();
-        // arrowhead
         var hx=ex-0.15*Math.cos(yaw), hy=ey+0.15*Math.sin(yaw);
         goalArrowShape.graphics.beginFill('#00ff80')
             .moveTo(ex,ey)
@@ -587,7 +566,6 @@ function clearGoalShapes(){
 function attachMapEvents(){
     var el = document.getElementById('map-container');
 
-    // ── MOUSE ──
     el.addEventListener('mousedown', function(e){
         if((!goalMode&&!poseMode)||!viewer) return;
         e.preventDefault();
@@ -596,7 +574,7 @@ function attachMapEvents(){
         isDragging=true;
         var mp=cssToMap(dragStartCanvas.x, dragStartCanvas.y);
         if(poseMode) drawPosePin(mp.x, mp.y, null, true);
-        else         drawGoalPin(mp.x, mp.y, null, true);
+        else drawGoalPin(mp.x, mp.y, null, true);
     });
 
     el.addEventListener('mousemove', function(e){
@@ -608,7 +586,7 @@ function attachMapEvents(){
         if(Math.sqrt(dx*dx+dy*dy)>8){
             var yaw=Math.atan2(-dy,dx);
             if(poseMode) drawPosePin(mp.x,mp.y,yaw,true);
-            else         drawGoalPin(mp.x,mp.y,yaw,true);
+            else drawGoalPin(mp.x,mp.y,yaw,true);
         }
     });
 
@@ -621,10 +599,9 @@ function attachMapEvents(){
         var dx=cx-dragStartCanvas.x, dy=cy-dragStartCanvas.y;
         var yaw=(Math.sqrt(dx*dx+dy*dy)>8) ? Math.atan2(-dy,dx) : 0;
         if(poseMode) showPosePopup(mp.x, mp.y, yaw);
-        else         showGoalPopup(mp.x, mp.y, yaw);
+        else showGoalPopup(mp.x, mp.y, yaw);
     });
 
-    // ── TOUCH ──
     el.addEventListener('touchstart', function(e){
         if((!goalMode&&!poseMode)||!viewer) return;
         e.preventDefault();
@@ -633,7 +610,7 @@ function attachMapEvents(){
         isDragging=true;
         var mp=cssToMap(dragStartCanvas.x, dragStartCanvas.y);
         if(poseMode) drawPosePin(mp.x,mp.y,null,true);
-        else         drawGoalPin(mp.x,mp.y,null,true);
+        else drawGoalPin(mp.x,mp.y,null,true);
     },{passive:false});
 
     el.addEventListener('touchmove', function(e){
@@ -646,7 +623,7 @@ function attachMapEvents(){
         if(Math.sqrt(dx*dx+dy*dy)>8){
             var yaw=Math.atan2(-dy,dx);
             if(poseMode) drawPosePin(mp.x,mp.y,yaw,true);
-            else         drawGoalPin(mp.x,mp.y,yaw,true);
+            else drawGoalPin(mp.x,mp.y,yaw,true);
         }
     },{passive:false});
 
@@ -659,21 +636,20 @@ function attachMapEvents(){
         var dx=cx-dragStartCanvas.x, dy=cy-dragStartCanvas.y;
         var yaw=(Math.sqrt(dx*dx+dy*dy)>8) ? Math.atan2(-dy,dx) : 0;
         if(poseMode) showPosePopup(mp.x, mp.y, yaw);
-        else         showGoalPopup(mp.x, mp.y, yaw);
+        else showGoalPopup(mp.x, mp.y, yaw);
     });
 }
 
 function showGoalPopup(mapX, mapY, yaw){
     pendingGoal={x:mapX, y:mapY, yaw:yaw};
     drawGoalPin(mapX, mapY, yaw, false);
-    document.getElementById('gp-coords').textContent='x: '+mapX.toFixed(3)+'   y: '+mapY.toFixed(3);
-    document.getElementById('gp-yaw').textContent='Heading: '+(yaw*(180/Math.PI)).toFixed(1)+'°';
+    document.getElementById('gp-coords').textContent='x: ' + mapX.toFixed(3) + '   y: ' + mapY.toFixed(3);
+    document.getElementById('gp-yaw').textContent='Heading: ' + (yaw*(180/Math.PI)).toFixed(1) + '°';
     document.getElementById('goal-popup').classList.add('visible');
 }
 
 function confirmMapGoal(){
     if(!pendingGoal) return;
-    // Capture into local var BEFORE dismissGoalPopup() so nothing can overwrite it
     var pg = { x: pendingGoal.x, y: pendingGoal.y, yaw: pendingGoal.yaw };
     pendingGoal = null;
     document.getElementById('goal-popup').classList.remove('visible');
@@ -687,16 +663,13 @@ function dismissGoalPopup(){
     if(!currentGoal) clearGoalShapes();
 }
 
-// =============================================================
-// POSE MODE (Set Initial Pose — like RViz2 "2D Pose Estimate")
-// =============================================================
-var poseMode     = false;
-var pendingPose  = null;
+var poseMode = false;
+var pendingPose = null;
 var posePinShape, poseArrowShape;
 
 function initPoseShapes(){
     if(posePinShape) return;
-    posePinShape  = new createjs.Shape();
+    posePinShape = new createjs.Shape();
     poseArrowShape = new createjs.Shape();
     viewer.scene.addChild(posePinShape);
     viewer.scene.addChild(poseArrowShape);
@@ -722,14 +695,16 @@ function drawPosePin(mapX, mapY, yaw, dragging){
 
 function clearPoseShapes(){
     if(!posePinShape) return;
-    posePinShape.graphics.clear(); poseArrowShape.graphics.clear(); viewer.scene.update();
+    posePinShape.graphics.clear();
+    poseArrowShape.graphics.clear();
+    viewer.scene.update();
 }
 
 function showPosePopup(mapX, mapY, yaw){
     pendingPose = {x:mapX, y:mapY, yaw:yaw};
     drawPosePin(mapX, mapY, yaw, false);
-    document.getElementById('pp-coords').textContent = 'x: '+mapX.toFixed(3)+'   y: '+mapY.toFixed(3);
-    document.getElementById('pp-yaw').textContent    = 'Heading: '+(yaw*(180/Math.PI)).toFixed(1)+'°';
+    document.getElementById('pp-coords').textContent = 'x: ' + mapX.toFixed(3) + '   y: ' + mapY.toFixed(3);
+    document.getElementById('pp-yaw').textContent = 'Heading: ' + (yaw*(180/Math.PI)).toFixed(1) + '°';
     document.getElementById('pose-popup').classList.add('visible');
 }
 
@@ -763,8 +738,11 @@ function dismissPosePopup(){
 }
 
 function togglePoseMode(){
-    // Turn off goal mode if on
-    if(goalMode){ goalMode=false; document.getElementById('goal-mode-btn').classList.remove('active'); document.getElementById('goal-mode-btn').innerHTML='<i class="fas fa-crosshairs"></i><span>Set Goal</span>'; }
+    if(goalMode){
+        goalMode=false;
+        document.getElementById('goal-mode-btn').classList.remove('active');
+        document.getElementById('goal-mode-btn').innerHTML='<i class="fas fa-crosshairs"></i><span>Set Goal</span>';
+    }
     poseMode = !poseMode;
     var btn  = document.getElementById('pose-mode-btn');
     var hint = document.getElementById('map-hint');
@@ -789,7 +767,12 @@ function toggleGoalMode(){
     var btn=document.getElementById('goal-mode-btn');
     var hint=document.getElementById('map-hint');
     var mapEl=document.getElementById('map-container');
-    if(poseMode){ poseMode=false; document.getElementById('pose-mode-btn').classList.remove('active'); document.getElementById('pose-mode-btn').innerHTML='<i class="fas fa-map-pin"></i><span>Set Pose</span>'; dismissPosePopup(); }
+    if(poseMode){
+        poseMode=false;
+        document.getElementById('pose-mode-btn').classList.remove('active');
+        document.getElementById('pose-mode-btn').innerHTML='<i class="fas fa-map-pin"></i><span>Set Pose</span>';
+        dismissPosePopup();
+    }
     if(goalMode){
         btn.classList.add('active');
         btn.innerHTML='<i class="fas fa-crosshairs"></i><span>Goal Mode ON</span>';
@@ -806,13 +789,11 @@ function toggleGoalMode(){
     }
 }
 
-// =============================================================
-// TOAST
-// =============================================================
 var toastTimer=null;
 function showToast(msg,type){
     var el=document.getElementById('toast');
-    el.textContent=msg; el.className='show toast-'+(type||'success');
+    el.textContent=msg;
+    el.className='show toast-'+(type||'success');
     if(toastTimer) clearTimeout(toastTimer);
     toastTimer=setTimeout(function(){ el.className=''; },3000);
 }
