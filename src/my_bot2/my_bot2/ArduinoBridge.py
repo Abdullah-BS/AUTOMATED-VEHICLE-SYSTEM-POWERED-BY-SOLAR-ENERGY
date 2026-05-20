@@ -1,21 +1,25 @@
 #!/usr/bin/env python3
+
+
+
+#!/usr/bin/env python3
 import math
 import time
 import serial
 
 import rclpy
 from rclpy.node import Node
-from geometry_msgs.msg import Twist
+from geometry_msgs.msg import Twist, TransformStamped
 from std_msgs.msg import Bool
 from nav_msgs.msg import Odometry
-
+from tf2_ros import TransformBroadcaster
 
 class ArduinoBridge(Node):
     def __init__(self):
         super().__init__('arduino_bridge')
 
         # --- SERIAL CONFIGURATION ---
-        self.serial_port = '/dev/arduino'
+        self.serial_port = '/dev/ttyUSB0'
         self.baud_rate = 115200
 
         # --- SPEED / THROTTLE CONFIG ---
@@ -52,6 +56,11 @@ class ArduinoBridge(Node):
         self.last_odom_time = time.time()
 
         self.odom_pub = self.create_publisher(Odometry, '/odom_arduino', 10)
+        
+        
+        #NEW CODE BY AHMED 
+        self.tf_broadcaster = TransformBroadcaster(self)
+
 
         # --- CONNECT TO ARDUINO ---
         try:
@@ -250,8 +259,14 @@ class ArduinoBridge(Node):
                 0.0, 0.0, 0.0, 0.0, 0.0, 0.1
             ]
 
+            #Whole FIX
             self.odom_pub.publish(odom)
 
+            
+            
+            
+            
+            
         except Exception as e:
             self.get_logger().warn(f"Serial feedback error: {e}")
 

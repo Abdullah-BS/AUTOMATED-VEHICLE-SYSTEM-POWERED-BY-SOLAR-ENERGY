@@ -20,7 +20,7 @@ def generate_launch_description():
         name='sllidar_a1',
         parameters=[{
             'channel_type': 'serial',
-            'serial_port': '/dev/lidar',   # LIDAR always
+            'serial_port': '/dev/ttyUSB1',   # LIDAR always
             'serial_baudrate': 115200,
             'frame_id': 'laser',
             'angle_compensate': True,
@@ -93,12 +93,12 @@ def generate_launch_description():
     rf2o_delayed = TimerAction(period=6.0, actions=[rf2o_node])
 
 #    # 7. Camera Safety Node
-#    camera_processor_node = Node(
-#        package='my_bot2',
-#        executable='camera_node',
-#        name='camera_safety_node',
-#        output='screen'
-#    )
+    camera_processor_node = Node(
+       package='my_bot2',
+       executable='camera_node',
+       name='camera_safety_node',
+       output='screen'
+   )
 
     # 8. Master Brake
     master_brake_node = Node(
@@ -214,20 +214,20 @@ def generate_launch_description():
     )
 
         
-    # rviz_config = os.path.join(
-    #     get_package_share_directory('my_bot2'),
-    #     'rviz',
-    #     'nav2_custom.rviz'
-    # )
+    rviz_config = os.path.join(
+        get_package_share_directory('my_bot2'),
+        'rviz',
+        'nav2_custom.rviz'
+    )
 
-    # rvizLaunch = Node(
-    #     package='rviz2',
-    #     executable='rviz2',
-    #     name='rviz2',
-    #     arguments=['-d', rviz_config],
-    #     additional_env={'LIBGL_ALWAYS_SOFTWARE': '1'},
-    #     output='screen'
-    # )
+    rvizLaunch = Node(
+        package='rviz2',
+        executable='rviz2',
+        name='rviz2',
+        arguments=['-d', rviz_config],
+        additional_env={'LIBGL_ALWAYS_SOFTWARE': '1'},
+        output='screen'
+    )
     # Keyboard teleop node
     teleop_node = Node(
         package='teleop_twist_keyboard',
@@ -256,10 +256,9 @@ def generate_launch_description():
         rf2o_delayed,
 
         ekf_delayed,
-#        camera_processor_node,
         # master_brake_node,
         nav2_delayed,
         # teleop_node,
-        # rvizLaunch,
+        rvizLaunch,
 
     ])

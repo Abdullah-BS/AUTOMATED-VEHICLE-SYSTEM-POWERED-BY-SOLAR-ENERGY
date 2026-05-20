@@ -16,7 +16,6 @@ def yaw_to_quaternion(yaw):
 class FakeAckermannOdom(Node):
     def __init__(self):
         super().__init__('fake_ackermann_odom')
-
         self.declare_parameter('port', '/dev/ttyACM1')
         self.declare_parameter('baud', 115200)
         self.declare_parameter('wheelbase', 0.90)
